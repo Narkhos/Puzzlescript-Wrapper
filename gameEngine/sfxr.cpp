@@ -1,34 +1,6 @@
 #include <iostream>
 #include "sfxr.hpp"
 
-#ifndef MIN_SAMPLE_RATE
-#define MIN_SAMPLE_RATE 22050
-#endif
-
-#ifndef SQUARE
-#define SQUARE 0
-#endif
-
-#ifndef SAWTOOTH
-#define SAWTOOTH 1
-#endif
-
-#ifndef SINE
-#define SINE 2
-#endif
-
-#ifndef NOISE
-#define NOISE 3
-#endif
-
-#ifndef TRIANGLE
-#define TRIANGLE 4
-#endif
-
-#ifndef BREAKER
-#define BREAKER 5
-#endif
-
 using namespace std;
 
 int bufferLength;
@@ -73,8 +45,6 @@ int arp_limit;
 double arp_mod;
 
 
-bool mute_stream;
-
 float* vselected=NULL;
 int vcurbutton=-1;
 
@@ -91,7 +61,7 @@ float frnd(float range)
 void repeat() {
     rep_time = 0;
 
-fperiod=100.0/(sound->p_base_freq*sound->p_base_freq+0.001);
+    fperiod=100.0/(sound->p_base_freq*sound->p_base_freq+0.001);
     period=(int)fperiod;
     fmaxperiod=100.0/(sound->p_freq_limit*sound->p_freq_limit+0.001);
     fslide=1.0-pow((double)sound->p_freq_ramp, 3.0)*0.01;
@@ -163,98 +133,89 @@ void ResetSample(bool restart)
 
 void SynthSample(int length, float* buffer)
 {
-    for(int i=0;i<length;i++)
-    {
-        if(!playing_sample)
-            break;
+	for(int i=0;i<length;i++)
+	{
+		if(!playing_sample)
+			break;
 
-        // Repeats
-        rep_time++;
-        if(rep_limit!=0 && rep_time>=rep_limit)
-        {
-            rep_time=0;
-            repeat();
-        }
+		rep_time++;
+		if(rep_limit!=0 && rep_time>=rep_limit)
+		{
+			rep_time=0;
+			ResetSample(true);
+		}
 
-        // Arpeggio (single)
+		// frequency envelopes/arpeggios
+		arp_time++;
+		if(arp_limit!=0 && arp_time>=arp_limit)
+		{
+			arp_limit=0;
+			fperiod*=arp_mod;
+		}
+		fslide+=fdslide;
+		fperiod*=fslide;
+		if(fperiod>fmaxperiod)
+		{
+			fperiod=fmaxperiod;
+			if(sound->p_freq_limit>0.0f)
+				playing_sample=false;
+		}
+		float rfperiod=fperiod;
+		if(vib_amp>0.0f)
+		{
+			vib_phase+=vib_speed;
+			rfperiod=fperiod*(1.0+sin(vib_phase)*vib_amp);
+		}
+		period=(int)rfperiod;
+		if(period<8) period=8;
+		square_duty+=square_slide;
+		if(square_duty<0.0f) square_duty=0.0f;
+		if(square_duty>0.5f) square_duty=0.5f;
+		// volume envelope
+		env_time++;
+		if(env_time>env_length[env_stage])
+		{
+			env_time=0;
+			env_stage++;
+			if(env_stage==3)
+				playing_sample=false;
+		}
+		if(env_stage==0)
+			env_vol=(float)env_time/env_length[0];
+		if(env_stage==1)
+			env_vol=1.0f+pow(1.0f-(float)env_time/env_length[1], 1.0f)*2.0f*sound->p_env_punch;
+		if(env_stage==2)
+			env_vol=1.0f-(float)env_time/env_length[2];
 
-        if(arp_limit!=0 && i>=arp_limit)
-        {
-            arp_limit=0;
-            fperiod*=arp_mod;
-        }
+		// phaser step
+		fphase+=fdphase;
+		iphase=abs((int)fphase);
+		if(iphase>1023) iphase=1023;
 
-        // Frequency slide, and frequency slide slide!
-        fslide+=fdslide;
-        fperiod*=fslide;
-        if(fperiod>fmaxperiod)
-        {
-            fperiod=fmaxperiod;
-            if(sound->p_freq_limit>0.0f)
-                playing_sample=false;
-        }
+		if(flthp_d!=0.0f)
+		{
+			flthp*=flthp_d;
+			if(flthp<0.00001f) flthp=0.00001f;
+			if(flthp>0.1f) flthp=0.1f;
+		}
 
-        // Vibrato
-        float rfperiod=fperiod;
-        if(vib_amp>0.0f)
-        {
-            vib_phase+=vib_speed;
-            rfperiod=fperiod*(1.0+sin(vib_phase)*vib_amp);
-        }
-        period=(int)rfperiod;
-        if(period<8) period=8;
-
-        square_duty+=square_slide;
-        if(square_duty<0.0f) square_duty=0.0f;
-        if(square_duty>0.5f) square_duty=0.5f;
-
-        // volume envelope
-        env_time++;
-        if(env_time>env_length[env_stage])
-        {
-            env_time=0;
-            env_stage++;
-            if(env_stage==3)
-                playing_sample=false;
-        }
-        if(env_stage==0)
-            env_vol=(float)env_time/env_length[0];
-        if(env_stage==1)
-            env_vol=1.0f+pow(1.0f-(float)env_time/env_length[1], 1.0f)*2.0f*sound->p_env_punch;
-        else // (env_stage==2)
-            env_vol=1.0f-(float)env_time/env_length[2];
-
-        // phaser step
-        fphase+=fdphase;
-        iphase=abs((int)fphase);
-        if(iphase>1023) iphase=1023;
-
-        if(flthp_d!=0.0f)
-        {
-            flthp*=flthp_d;
-            if(flthp<0.00001f) flthp=0.00001f;
-            if(flthp>0.1f) flthp=0.1f;
-        }
-
-        // 8x supersampling
-        float ssample=0.0f;
-        for(int si=0;si<8;si++)
-        {
-            float sample=0.0f;
-            phase++;
-            if(phase>=period)
-            {
+		float ssample=0.0f;
+		for(int si=0;si<8;si++) // 8x supersampling
+		{
+			float sample=0.0f;
+			phase++;
+			if(phase>=period)
+			{
 //				phase=0;
-                phase%=period;
-                if(sound->wave_type==NOISE)
-                    for(int i=0;i<32;i++)
-                        noise_buffer[i]=frnd(2.0f)-1.0f;
-            }
-
-            // base waveform
-            float fp=(float)phase/period;
-            switch(sound->wave_type)
-            {
+				phase%=period;
+				if(sound->wave_type==3)
+					for(int i=0;i<32;i++)
+						noise_buffer[i]=frnd(2.0f)-1.0f;
+			}
+			// base waveform
+			float fp=(float)phase/period;
+			switch(sound->wave_type)
+			{
                 case SQUARE: // square
                     if(fp<square_duty)
                         sample=0.5f;
@@ -270,232 +231,78 @@ void SynthSample(int length, float* buffer)
                 case NOISE: // noise
                     sample=noise_buffer[phase*32/period];
                 break;
-                case TRIANGLE:
+                case TRIANGLE: // triangle
                     sample = abs(1 - fp * 2) - 1;
                 break;
-                case BREAKER:
+                case BREAKER: // breaker
                     sample = abs(1 - fp * fp * 2) - 1;
                 break;
-            }
-            // Low-pass filter
-            float pp=fltp;
-            fltw*=fltw_d;
-            if(fltw<0.0f) fltw=0.0f;
-            if(fltw>0.1f) fltw=0.1f;
-            if(sound->p_lpf_freq!=1.0f)
-            {
-                fltdp+=(sample-fltp)*fltw;
-                fltdp-=fltdp*fltdmp;
-            }
-            else
-            {
-                fltp=sample;
-                fltdp=0.0f;
-            }
-            fltp+=fltdp;
+			}
+			// lp filter
+			float pp=fltp;
+			fltw*=fltw_d;
+			if(fltw<0.0f) fltw=0.0f;
+			if(fltw>0.1f) fltw=0.1f;
+			if(sound->p_lpf_freq!=1.0f)
+			{
+				fltdp+=(sample-fltp)*fltw;
+				fltdp-=fltdp*fltdmp;
+			}
+			else
+			{
+				fltp=sample;
+				fltdp=0.0f;
+			}
+			fltp+=fltdp;
+			// hp filter
+			fltphp+=fltp-pp;
+			fltphp-=fltphp*flthp;
+			sample=fltphp;
+			// phaser
+			phaser_buffer[ipp&1023]=sample;
+			sample+=phaser_buffer[(ipp-iphase+1024)&1023];
+			ipp=(ipp+1)&1023;
+			// final accumulation and envelope application
+			ssample+=sample*env_vol;
+		}
+		ssample=ssample/8*master_vol;
 
-            // High-pass filter
-            fltphp+=fltp-pp;
-            fltphp-=fltphp*flthp;
-            sample=fltphp;
+		ssample*=2.0f*sound->sound_vol;
 
-            // phaser
-            phaser_buffer[ipp&1023]=sample;
-            sample+=phaser_buffer[(ipp-iphase+1024)&1023];
-            ipp=(ipp+1)&1023;
-
-            // final accumulation and envelope application
-            ssample+=sample*env_vol;
-        }
-
-        ssample=ssample/8*master_vol;
-        ssample*=2.0f*sound->sound_vol;
-
-        if(buffer!=NULL)
-        {
-            if(ssample>1.0f) ssample=1.0f;
-            if(ssample<-1.0f) ssample=-1.0f;
-            *buffer++=ssample;
-        }
-    }
+		if(buffer!=NULL)
+		{
+			if(ssample>1.0f) ssample=1.0f;
+			if(ssample<-1.0f) ssample=-1.0f;
+			*buffer++=ssample;
+		}
+	}
 }
-
-
-
-void generate(int length, float* buffer) {
-
-    repeat(); // First time through, this is a bit of a misnomer
-    ResetSample(true);
-
-    for(int i=0;i<length;i++)
-    {
-        if(!playing_sample)
-            break;
-
-        rep_time++;
-        if(rep_limit!=0 && rep_time>=rep_limit)
-        {
-            rep_time=0;
-            repeat();
-        }
-
-        // frequency envelopes/arpeggios
-        arp_time++;
-        if(arp_limit!=0 && arp_time>=arp_limit)
-        {
-            arp_limit=0;
-            fperiod*=arp_mod;
-        }
-        fslide+=fdslide;
-        fperiod*=fslide;
-        if(fperiod>fmaxperiod)
-        {
-            fperiod=fmaxperiod;
-            if(sound->p_freq_limit>0.0f)
-                playing_sample=false;
-        }
-        float rfperiod=fperiod;
-        if(vib_amp>0.0f)
-        {
-            vib_phase+=vib_speed;
-            rfperiod=fperiod*(1.0+sin(vib_phase)*vib_amp);
-        }
-        period=(int)rfperiod;
-        if(period<8) period=8;
-        square_duty+=square_slide;
-        if(square_duty<0.0f) square_duty=0.0f;
-        if(square_duty>0.5f) square_duty=0.5f;
-        // volume envelope
-        env_time++;
-        if(env_time>env_length[env_stage])
-        {
-            env_time=0;
-            env_stage++;
-            if(env_stage==3)
-                playing_sample=false;
-        }
-        if(env_stage==0)
-            env_vol=(float)env_time/env_length[0];
-        if(env_stage==1)
-            env_vol=1.0f+pow(1.0f-(float)env_time/env_length[1], 1.0f)*2.0f*sound->p_env_punch;
-        if(env_stage==2)
-            env_vol=1.0f-(float)env_time/env_length[2];
-
-        // phaser step
-        fphase+=fdphase;
-        iphase=abs((int)fphase);
-        if(iphase>1023) iphase=1023;
-
-        if(flthp_d!=0.0f)
-        {
-            flthp*=flthp_d;
-            if(flthp<0.00001f) flthp=0.00001f;
-            if(flthp>0.1f) flthp=0.1f;
-        }
-
-        float ssample=0.0f;
-        for(int si=0;si<8;si++) // 8x supersampling
-        {
-            float sample=0.0f;
-            phase++;
-            if(phase>=period)
-            {
-    //				phase=0;
-                phase%=period;
-                if(sound->wave_type==3)
-                    for(int i=0;i<32;i++)
-                        noise_buffer[i]=frnd(2.0f)-1.0f;
-            }
-            // base waveform
-            float fp=(float)phase/period;
-            switch(sound->wave_type)
-            {
-                case SQUARE: // square
-                    if(fp<square_duty)
-                        sample=0.5f;
-                    else
-                        sample=-0.5f;
-                break;
-                case SAWTOOTH: // sawtooth
-                    sample=1.0f-fp*2;
-                break;
-                case SINE: // sine
-                    sample=(float)sin(fp*2*PI);
-                break;
-                case NOISE: // noise
-                    sample=noise_buffer[phase*32/period];
-                break;
-                case TRIANGLE:
-                    sample = abs(1 - fp * 2) - 1;
-                break;
-            }
-            // lp filter
-            float pp=fltp;
-            fltw*=fltw_d;
-            if(fltw<0.0f) fltw=0.0f;
-            if(fltw>0.1f) fltw=0.1f;
-            if(sound->p_lpf_freq!=1.0f)
-            {
-                fltdp+=(sample-fltp)*fltw;
-                fltdp-=fltdp*fltdmp;
-            }
-            else
-            {
-                fltp=sample;
-                fltdp=0.0f;
-            }
-            fltp+=fltdp;
-            // hp filter
-            fltphp+=fltp-pp;
-            fltphp-=fltphp*flthp;
-            sample=fltphp;
-            // phaser
-            phaser_buffer[ipp&1023]=sample;
-            sample+=phaser_buffer[(ipp-iphase+1024)&1023];
-            ipp=(ipp+1)&1023;
-            // final accumulation and envelope application
-            ssample+=sample*env_vol;
-        }
-        ssample=ssample/8*master_vol;
-
-        ssample*=2.0f*sound->sound_vol;
-
-        if(buffer!=NULL)
-        {
-            if(ssample>1.0f) ssample=1.0f;
-            if(ssample<-1.0f) ssample=-1.0f;
-            *buffer++=ssample;
-        }
-    }
-  return;
-};
 
 static void SDLAudioCallback(void *userdata, Uint8 *stream, int len)
 {
-    if (playing_sample && !mute_stream)
-    {
-        unsigned int l = len/2;
-        sound->generateSound();
-        /*float fbuf[l];
-        memset(fbuf, 0, sizeof(fbuf));
-        SynthSample(l, fbuf);*/
-        while (l--)
-        {
-            float f = sound->fbuf[l];
-            if (f < -1.0) f = -1.0;
-            if (f > 1.0) f = 1.0;
-            ((Sint8*)stream)[l] = (Sint8)(f * 32767);
-        }
-    }
-    else memset(stream, 0, len);
+    if (playing_sample)
+	{
+		unsigned int l = len/2;
+		float fbuf[l];
+		memset(fbuf, 0, sizeof(fbuf));
+		SynthSample(l, fbuf);
+		while (l--)
+		{
+			float f = fbuf[l];
+			if (f < -1.0) f = -1.0;
+			if (f > 1.0) f = 1.0;
+			((Sint16*)stream)[l] = (Sint16)(f * 32767);
+		}
+	}
+	else memset(stream, 0, len);
 }
 
 void initSfxr()
 {
     bufferLength = 512;
 
-	des.freq = 44100; //22050;// 5512; //
-	des.format = AUDIO_S16SYS; //AUDIO_S8; //
+	des.freq = 44100; // 22050; // 5512; //
+	des.format = AUDIO_S16SYS; // AUDIO_S8; //
 	des.channels = 1;
 	des.samples = bufferLength;
 	des.callback = SDLAudioCallback;
@@ -509,7 +316,6 @@ void initSfxr()
 
 // Constructors
 SfxrSound::SfxrSound()
-    :fbuf(NULL)
 {
     ResetParams();
 }
@@ -584,31 +390,14 @@ SfxrSound::SfxrSound(
     p_arp_mod(p_arp_mod),
     sound_vol(sound_vol),
     sample_rate(sample_rate),
-    bit_depth(bit_depth),
-    fbuf(NULL)
+    bit_depth(bit_depth)
 {
 
-}
-
-void SfxrSound::generateSound()
-{
-    int l = bufferLength;
-    //cout << "sample_rate : " << this->sample_rate << endl;
-    //int summands = (int)(44100 / this->sample_rate);
-    //cout << "summands : " << summands << endl;
-    //int l = ceil(env_total_length / summands);
-    fbuf = new float[l];
-    memset(fbuf, 0, sizeof(fbuf));
-    sound = this;
-    SynthSample(l, fbuf);
-    //this->trace(true);
-    //generate(l, fbuf);
 }
 
 SfxrSound::~SfxrSound()
 {
-    delete [] fbuf;
-    fbuf = NULL;
+
 }
 
 void SfxrSound::ResetParams()
@@ -647,8 +436,6 @@ void SfxrSound::ResetParams()
 
     sample_rate = 44100;
     bit_depth = AUDIO_S16SYS;
-
-    generateSound();
 }
 
 void SfxrSound::playSample()
@@ -659,7 +446,7 @@ void SfxrSound::playSample()
     playing_sample=true;
 }
 
-void SfxrSound::trace(bool traceBuffer = false)
+void SfxrSound::trace()
 {
     cout << "p_env_attack : " << p_env_attack << endl;
     cout << "p_env_sustain : " << p_env_sustain << endl;
@@ -697,23 +484,4 @@ void SfxrSound::trace(bool traceBuffer = false)
     cout << "sample_rate : " << sample_rate << endl;
     cout << "bit_depth : " << bit_depth << endl;
     cout << "wave_type : " << wave_type << endl;
-
-    if(traceBuffer)
-    {
-        cout << " ====== Buffer ======" << endl;
-        if(fbuf != NULL)
-        {
-            for(int i = 0; i < sizeof(this->fbuf); i++)
-            {
-                cout << fbuf[0] << ' ';
-            }
-
-            cout << endl;
-        }
-        else
-        {
-            cout << "Le buffer est vide" << endl;
-        }
-        cout << " ====== Fin Buffer ======" << endl;
-    }
 }
