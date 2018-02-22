@@ -9,6 +9,30 @@
 #include <math.h>
 #include <SDL2/SDL.h>
 
+#ifndef SQUARE
+#define SQUARE 0
+#endif
+
+#ifndef SAWTOOTH
+#define SAWTOOTH 1
+#endif
+
+#ifndef SINE
+#define SINE 2
+#endif
+
+#ifndef NOISE
+#define NOISE 3
+#endif
+
+#ifndef TRIANGLE
+#define TRIANGLE 4
+#endif
+
+#ifndef BREAKER
+#define BREAKER 5
+#endif
+
 #define rnd(n) (rand()%(n+1))
 
 #define PI 3.14159265f
@@ -70,7 +94,6 @@ class SfxrSound
 {
     public:
 
-    float *fbuf;
 	// Params
 	int wave_type;
 
@@ -152,10 +175,9 @@ class SfxrSound
 	);
     ~SfxrSound();
 	void ResetParams();
-	void generateSound();
 
 	void playSample();
-	void trace(bool traceBuffer);
+	void trace();
 };
 
 #endif
