@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License          *
  * along with  this program; If not, see <http://www.gnu.org/licenses/>.             *
  *************************************************************************************/
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,12 +56,12 @@ class PuzzlescriptSprite
     int textureId;
     bool toUpdate;
 
-    PuzzlescriptSprite(int widht, int height)
-        :textureId(-1), toUpdate(true)
+    PuzzlescriptSprite(int width, int height)
+        :textureId(-1), surface(NULL)
     {
-        this->surface = SDL_CreateRGBSurface(0, widht, height, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
-        SDL_FillRect(this->surface, NULL, SDL_MapRGB(this->surface->format, 0, 0, 0));
+        this->init(width, height);
     }
+
     ~PuzzlescriptSprite()
     {
         deleteTexture();
@@ -69,10 +69,23 @@ class PuzzlescriptSprite
         this->surface = NULL;
     }
 
+    void init(int width, int height)
+    {
+        this->toUpdate = true;
+        this->deleteTexture();
+        SDL_FreeSurface(this->surface);
+        this->surface = NULL;
+        this->surface = SDL_CreateRGBSurface(0, width, height, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+        SDL_FillRect(this->surface, NULL, SDL_MapRGB(this->surface->format, 0, 0, 0));
+    }
+
     void deleteTexture()
     {
-        glDeleteTextures(1,(GLuint*)&(this->textureId));
-        this->textureId = -1;
+        if(this->textureId != -1)
+        {
+            glDeleteTextures(1,(GLuint*)&(this->textureId));
+            this->textureId = -1;
+        }
     }
 
     void updateTexture()
@@ -97,7 +110,6 @@ class PuzzlescriptSprite
            drawImage(this->textureId, x, y, w, h, 1.0);
        }
     }
-
 };
 
 vector<PuzzlescriptSprite*> sprites;
@@ -118,9 +130,22 @@ rgbColor webColorToRGB(const char* fillStyle)
 {
     rgbColor rgb;
     string tmp(fillStyle);
-    string r = tmp.substr(1,2);
-    string g = tmp.substr(3,2);
-    string b = tmp.substr(5,2);
+    string r;
+    string g;
+    string b;
+
+    if(strlen(fillStyle) == 4)
+    {
+        r = tmp.substr(1,1) + tmp.substr(1,1);
+        g = tmp.substr(2,1) + tmp.substr(2,1);
+        b = tmp.substr(3,1) + tmp.substr(3,1);
+    }
+    else
+    {
+        r = tmp.substr(1,2);
+        g = tmp.substr(3,2);
+        b = tmp.substr(5,2);
+    }
 
     stringstream r_ss;
     r_ss << std::hex << r;
@@ -193,23 +218,34 @@ rgbColor getBackgroundColor(duk_context *ctx)
 
     string bg = duk_get_string(ctx, -1);
     backgroundColor = webColorToRGB(bg.c_str());
-
     duk_pop(ctx);
     return backgroundColor;
 }
 
-void updateCellWidth(duk_context *ctx)
+bool updateCellWidth(duk_context *ctx)
 {
+    static int precCellWidth = 0;
     duk_eval_string(ctx,"cellwidth");
     cellWidth = duk_get_number(ctx, -1);
     duk_pop(ctx);
+
+    bool change = precCellWidth != cellWidth;
+
+    precCellWidth = cellWidth;
+    return change;
 }
 
-void updateCellHeight(duk_context *ctx)
+bool updateCellHeight(duk_context *ctx)
 {
+    static int precCellHeight = 0;
     duk_eval_string(ctx,"cellheight");
     cellHeight = duk_get_number(ctx, -1);
     duk_pop(ctx);
+
+    bool change = precCellHeight != cellHeight;
+
+    precCellHeight = cellHeight;
+    return change;
 }
 
 void updateDeltaTime(duk_context *ctx)
@@ -322,7 +358,7 @@ static duk_ret_t nativeGenerateSound(duk_context *ctx)
             duk_require_int(ctx,25),
             duk_require_int(ctx,26)
         );
-        soundList[seed]->generateSound();
+        //soundList[seed]->generateSound();
     }
     return 0;
 }
@@ -335,12 +371,17 @@ static duk_ret_t nativeFillRect(duk_context *ctx) {
     int y = duk_require_int(ctx, 3);
     int w = duk_require_int(ctx, 4);
     int h = duk_require_int(ctx, 5);
+    cellWidth = duk_require_int(ctx, 6);
+    cellHeight = duk_require_int(ctx, 7);
 
     if(string(fillStyle) != string("transparent"))
     {
-        SDL_Rect r;
-        r.x=x;r.y=y;r.w=w;r.h=h;
         SDL_Surface * s = sprites[contextId]->surface;
+        SDL_Rect r;
+        r.x = x;
+        r.y = y;
+        r.w = w;
+        r.h = h;
 
         // convert web style color string to RGB
         rgbColor color = webColorToRGB(fillStyle);
@@ -351,14 +392,21 @@ static duk_ret_t nativeFillRect(duk_context *ctx) {
 
 static duk_ret_t nativeClearRect(duk_context *ctx) {
 	int contextId = duk_require_int(ctx, 0);
+
+	SDL_Surface * s = sprites[contextId]->surface;
     int x = duk_require_int(ctx, 1);
     int y = duk_require_int(ctx, 2);
     int w = duk_require_int(ctx, 3);
     int h = duk_require_int(ctx, 4);
+    cellWidth = duk_require_int(ctx, 5);
+    cellHeight = duk_require_int(ctx, 6);
 
     SDL_Rect r;
-    r.x=x;r.y=y;r.w=w;r.h=h;
-    SDL_Surface * s = sprites[contextId]->surface;
+    r.x = x;
+    r.y = y;
+    r.w = w;
+    r.h = h;
+
 
     SDL_FillRect(s, &r, SDL_MapRGBA(s->format, 0, 0, 0, 0));
 
@@ -467,8 +515,19 @@ void updatePuzzlescript(duk_context * ctx, int dt)
     if(cumulativeTime >= puzzlescriptInterval)
     {
         duk_eval_string_noresult(ctx, "update()");
-        updateCellWidth(ctx);
-        updateCellHeight(ctx);
+        int change = updateCellWidth(ctx);
+        change = change | updateCellHeight(ctx);
+
+        // Force redrawing sprites if game size changed
+        if(change)
+        {
+            for(int i = 0; i < sprites.size(); i++)
+            {
+                sprites[i]->init(cellWidth, cellHeight);
+            }
+            duk_eval_string_noresult(ctx, "forceRegenImages=true;");
+            duk_eval_string_noresult(ctx, "canvasResize()");
+        }
         cumulativeTime = 0;
     }
 }
@@ -730,13 +789,13 @@ void run(duk_context *ctx)
         // GESTION DE L'AFFICHAGE
         glClear(GL_COLOR_BUFFER_BIT);
 
-        /*
+
         // Display all sprites
-        for(int i = 0; i < sprites.size(); i++)
+        /*for(int i = 0; i < sprites.size(); i++)
         {
             sprites[i]->draw(i%34 * 30, i/34 * 30, 30, 30);
-        }
-        */
+        }*/
+
 
         for(int i = 0; i<instances.size();i++)
         {
@@ -814,10 +873,10 @@ void puzzlescriptWrapper(Engine& engine, string gameFile)
 	duk_push_c_function(ctx, nativeGenerateSound, 27);
     duk_put_prop_string(ctx, -2, "nativeGenerateSound");
 
-	duk_push_c_function(ctx, nativeFillRect, 6);
+	duk_push_c_function(ctx, nativeFillRect, 8);
     duk_put_prop_string(ctx, -2, "nativeFillRect");
 
-	duk_push_c_function(ctx, nativeClearRect, 5);
+	duk_push_c_function(ctx, nativeClearRect, 7);
     duk_put_prop_string(ctx, -2, "nativeClearRect");
 
     duk_push_c_function(ctx, drawImageNative, 3);
