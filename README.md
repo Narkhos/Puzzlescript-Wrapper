@@ -12,6 +12,16 @@ I didn't rewrite puzzlescript engine in C++. The javascript engine is embeded so
 
 PuzzlescriptWrapper is published under the terms of the LGPL v3 license (See both [GPL](https://www.gnu.org/licenses/gpl.txt) and [LGPL](https://www.gnu.org/licenses/lgpl.txt) Licenses for more details)
 
+## v0.1.1
+
+	For this version, I tried a lot of games and fixed some bugs that prevent some of them to run correctly.
+	
+### Content
+
+	- Sfx emulation almost work (the sound is playing to fast but is mostly the same
+	- short web color format like "#af0" is now working
+	- fix some sprite display
+	
 ## v0.1.0
 
 ### Content
