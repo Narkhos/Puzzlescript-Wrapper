@@ -499,6 +499,7 @@ string loadGame(string gameFile)
                 istreambuf_iterator<char>());
     stringstream ss;
 
+    replaceAll(game,"\\","\\\\");
     replaceAll(game,"\r","");
     replaceAll(game,"\n","\\n");
     replaceAll(game,"\"","\\\"");
@@ -908,7 +909,7 @@ void puzzlescriptWrapper(Engine& engine, string gameFile)
 	if(!loadFile(ctx, (puzzlescriptPath + string("compiler.js")).c_str())) goto finished;
 	if(!loadFile(ctx, (puzzlescriptPath + string("inputoutput.js")).c_str())) goto finished;
 
-    if(!loadFile(ctx, (jsPath + string("redrawUpgrade.js")).c_str())) goto finished;
+    if(!loadFile(ctx, (jsPath + string("overload.js")).c_str())) goto finished;
 
 	// Testing ps modules
 	//if(!loadFile(ctx, puzzlescriptPath + string("test.js"))) goto finished;
