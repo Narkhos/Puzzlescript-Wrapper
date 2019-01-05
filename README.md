@@ -2,7 +2,7 @@
 
 This project provides a way to distribute a [Puzzlescript](https://www.puzzlescript.net/) game as a standalone application.
 
-You can download a binary version of the project on [lafaceobscuredupixel.fr](http://lafaceobscuredupixel.fr/puzzlescriptWrapper)
+You can download a binary version of the project on [lafaceobscuredupixel.fr](http://lafaceobscuredupixel.fr/labo/puzzlescriptWrapper)
 
 You can find the [official Puzzlescript repository here](https://github.com/increpare/PuzzleScript).
 
