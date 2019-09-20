@@ -8,9 +8,17 @@ You can find the [official Puzzlescript repository here](https://github.com/incr
 
 PuzzlescriptWrapper is using the c++/SDL2/Opengl combo.
 
-I didn't rewrite puzzlescript engine in C++. The javascript engine is embeded so it can be replace or updated easily (see ./data/js/puzzlescript/ sub-directory)
+I didn't rewrite puzzlescript engine in C++. The javascript engine is embeded so it can be replaced or updated easily (see ./data/js/puzzlescript/ sub-directory)
 
 PuzzlescriptWrapper is published under the terms of the LGPL v3 license (See both [GPL](https://www.gnu.org/licenses/gpl.txt) and [LGPL](https://www.gnu.org/licenses/lgpl.txt) Licenses for more details)
+
+## v2.0.0
+
+	This is a rewrite of PuzzlescriptWrapper using visual studio and v8 javascript engine.
+	
+	- Performances allow playing real time puzzlescript games without any framerate issue
+	- You can choose the game you want to play in a list (hitting TAB key to show/hide the list)
+	- If there is only one game in the ./data/games/ directory, the game list feature is disabled. So you can distribute a standalone version of your game without any compilation or modification in the puzzlescriptWrapper project.
 
 ## v0.1.1
 
