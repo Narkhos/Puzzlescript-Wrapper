@@ -21,7 +21,7 @@
 #define __PS_WRAPPER_VERSION__ "v2.0.0"
 #endif
 
-#define __USE_MINIFIED__
+// #define __USE_MINIFIED__
 #include <iostream>
 #include <sstream>
 #include <map>
