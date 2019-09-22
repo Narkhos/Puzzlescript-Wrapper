@@ -445,13 +445,10 @@ v8::Local<v8::String> fileToString(string filename)
 {
 	std::ifstream in(filename);
 	if (in) {
-		in.seekg(0, std::ios::end);
-		size_t len = in.tellg();
-		in.seekg(0);
-		std::string contents(len + 1, '\0');
-		in.read(&contents[0], len);
+		ostringstream contents;
+		contents << in.rdbuf();
 
-		return v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), contents.c_str());
+		return v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), contents.str().c_str());
 	}
 
 	return v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "");
