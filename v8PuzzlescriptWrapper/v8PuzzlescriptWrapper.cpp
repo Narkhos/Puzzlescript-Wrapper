@@ -24,6 +24,7 @@
 // #define __USE_MINIFIED__
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 #include <map>
 #include <SDL.h>
 #include <SDL_ttf.h>
@@ -32,6 +33,7 @@
 #include <libplatform/libplatform.h>
 #include "sfxr.hpp"
 #include "gui.hpp"
+#include "gameEngine/json.hpp"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "opengl32.lib")
@@ -39,6 +41,32 @@
 #endif
 
 using namespace std;
+
+class Config
+{
+	public:
+		string filepath;
+		nlohmann::json data;
+
+		Config(string _filepath)
+			:filepath(_filepath)
+		{
+			ifstream i(this->filepath);
+			
+			i >> data;
+		}
+
+		void save()
+		{
+			ofstream o(filepath);
+			o << setw(4) << data << endl;
+		}
+
+		void trace()
+		{
+			cout << data << endl;
+		}
+};
 
 TTF_Font* font = nullptr;
 
@@ -229,6 +257,7 @@ vector<spriteInstance> instances;
 
 int width = 1024;
 int height = 768;
+bool fullscreen = false;
 int cellWidth;
 int cellHeight;
 int puzzlescriptInterval;
@@ -727,6 +756,12 @@ int main(int argc, char* argv[])
 
 	string gameFile = "";
 
+	Config config("./config.json");
+	width = config.data["width"];
+	height = config.data["height"];
+	sfxOn = config.data["sfx"];
+	fullscreen = config.data["fullscreen"];
+
 	if (argc > 1)
 	{
 		string arg = string(argv[1]);
@@ -798,7 +833,9 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	window = SDL_CreateWindow(gameTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+	Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+	if (fullscreen) flags = flags | SDL_WINDOW_FULLSCREEN;
+	window = SDL_CreateWindow(gameTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, flags);
 
 	if (window == nullptr)
 	{

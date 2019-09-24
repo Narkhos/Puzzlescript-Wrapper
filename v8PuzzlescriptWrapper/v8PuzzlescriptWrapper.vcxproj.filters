@@ -24,6 +24,9 @@
     <ClInclude Include="gameEngine\sfxr.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="gameEngine\json.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
