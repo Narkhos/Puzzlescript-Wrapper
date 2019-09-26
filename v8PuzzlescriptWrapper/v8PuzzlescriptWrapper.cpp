@@ -866,6 +866,9 @@ int main(int argc, char* argv[])
 	glViewport(0, 0, width, height);
 	glOrtho(0, width, height, 0, -1, 1);
 
+	// Disable vsync for performance purpose
+	SDL_GL_SetSwapInterval(0);
+
 	glewInit();
 
 	// INIT GAME LIST
