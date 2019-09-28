@@ -742,6 +742,47 @@ void initGame(string gameFile, v8::Isolate* isolate, string jsPath, string puzzl
 	updateCellHeight(isolate);
 }
 
+// CONTROLLERS MANAGEMENT
+
+map<int, SDL_GameController *> controllers; ///< Liste des controllers branchés
+
+int addController(int id)
+{
+	if (SDL_IsGameController(id)) {
+		SDL_GameController *pad = SDL_GameControllerOpen(id);
+
+		if (pad)
+		{
+			SDL_Joystick *joy = SDL_GameControllerGetJoystick(pad);
+			int instanceID = SDL_JoystickInstanceID(joy);
+
+			controllers[instanceID] = pad;
+			cout << "Branchement du controller " << instanceID << endl;
+			return instanceID;
+		}
+	}
+	return -1;
+}
+
+void removeController(int id)
+{
+	cout << "Debranchement du controller " << id << endl;
+	SDL_GameController *pad = controllers[id];
+	SDL_GameControllerClose(pad);
+	controllers[id] = NULL;
+	controllers.erase(id);
+}
+
+void foundControllers()
+{
+	for (int i = 0; i < SDL_NumJoysticks(); ++i)
+	{
+		addController(i);
+	}
+}
+
+
+// MAIN
 int main(int argc, char* argv[])
 {
 	// Choose normal or minified puzzlescript source
@@ -832,6 +873,18 @@ int main(int argc, char* argv[])
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Init Failed", msg.c_str(), nullptr);
 		return 0;
 	}
+
+	int nbMappingsAdded = SDL_GameControllerAddMappingsFromFile("./data/gamecontrollerdb.txt");
+	if (nbMappingsAdded == -1)
+	{
+		cout << SDL_GetError() << endl;
+	}
+	else
+	{
+		cout << "Nombre de mappings ajoutes : " << nbMappingsAdded << endl;
+	}
+
+	foundControllers();
 
 	Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 	if (fullscreen) flags = flags | SDL_WINDOW_FULLSCREEN;
@@ -938,6 +991,81 @@ int main(int argc, char* argv[])
 		{
 			switch (event.type)
 			{
+				case SDL_CONTROLLERDEVICEADDED:
+					addController(event.cdevice.which);
+					break;
+				case SDL_CONTROLLERDEVICEREMOVED:
+					removeController(event.cdevice.which);
+					break;
+				case SDL_CONTROLLERBUTTONDOWN:
+					switch (event.cbutton.button)
+					{
+						case SDL_CONTROLLER_BUTTON_START:
+							executeJavascript(context, "onKeyDown({keyCode: 82})");
+							break;
+						case SDL_CONTROLLER_BUTTON_A:
+							executeJavascript(context, "onKeyDown({keyCode: 13})");
+							break;
+						case SDL_CONTROLLER_BUTTON_B:
+							executeJavascript(context, "onKeyDown({keyCode: 85})");
+							break;
+						case SDL_CONTROLLER_BUTTON_BACK:
+							if (getIsTitleScreen(isolate))
+							{
+								running = false;
+							}
+							else
+							{
+								executeJavascript(context, "onKeyDown({keyCode: 27})");
+							}
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+							executeJavascript(context, "onKeyDown({keyCode: 37})");
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+							executeJavascript(context, "onKeyDown({keyCode: 39})");
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_UP:
+							executeJavascript(context, "onKeyDown({keyCode: 38})");
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+							executeJavascript(context, "onKeyDown({keyCode: 40})");
+							break;
+						default:
+							cout << (int)(event.cbutton.button) << endl;
+					}
+					break;
+				case SDL_CONTROLLERBUTTONUP:
+					switch (event.cbutton.button)
+					{
+						case SDL_CONTROLLER_BUTTON_START:
+							executeJavascript(context, "onKeyUp({keyCode: 82})");
+							break;
+						case SDL_CONTROLLER_BUTTON_A:
+							executeJavascript(context, "onKeyUp({keyCode: 13})");
+							break;
+						case SDL_CONTROLLER_BUTTON_B:
+							executeJavascript(context, "onKeyUp({keyCode: 85})");
+							break;
+						case SDL_CONTROLLER_BUTTON_BACK:
+							executeJavascript(context, "onKeyUp({keyCode: 27})");
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+							executeJavascript(context, "onKeyUp({keyCode: 37})");
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+							executeJavascript(context, "onKeyUp({keyCode: 39})");
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_UP:
+							executeJavascript(context, "onKeyUp({keyCode: 38})");
+							break;
+						case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+							executeJavascript(context, "onKeyUp({keyCode: 40})");
+							break;
+						default:
+							cout << (int)(event.cbutton.button) << endl;
+					}
+					break;
 				case SDL_MOUSEBUTTONUP:
 					if (showGameList && gameList.selectedEntry)
 					{
