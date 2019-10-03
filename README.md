@@ -14,30 +14,34 @@ PuzzlescriptWrapper is published under the terms of the LGPL v3 license (See bot
 
 ## v2.0.0
 
-	This is a rewrite of PuzzlescriptWrapper using visual studio and v8 javascript engine.
-	
-	- Performances allow playing real time puzzlescript games without any framerate issue
-	- You can choose the game you want to play in a list (hitting TAB key to show/hide the list)
-	- If there is only one game in the ./data/games/ directory, the game list feature is disabled. So you can distribute a standalone version of your game without any compilation or modification in the puzzlescriptWrapper project.
+This is a rewrite of PuzzlescriptWrapper using visual studio and v8 javascript engine.
+
+- Performances allow playing real time puzzlescript games without any framerate issue
+- You can choose the game you want to play in a list (hitting TAB key to show/hide the list)
+- If there is only one game in the ./data/games/ directory, the game list feature is disabled. So you can distribute a standalone version of your game without any compilation or modification in the puzzlescriptWrapper project.
+- Basic game controller support (tested with xbox 360 controller but should work with most pc compatible controllers)
+- show/hide framerate by hitting 'i' key
+- fullscreen mode and resolution can be setup from the config.json file
+- When you resize the window, the game is now resized accordingly
 
 ## v0.1.1
 
-	For this version, I tried a lot of games and fixed some bugs that prevent some of them to run correctly.
+For this version, I tried a lot of games and fixed some bugs that prevent some of them to run correctly.
 	
 ### Content
 
-	- Sfx emulation almost work (the sound is playing to fast but is mostly the same
-	- short web color format like "#af0" is now working
-	- fix some sprite display
+- Sfx emulation almost work (the sound is playing to fast but is mostly the same
+- short web color format like "#af0" is now working
+- fix some sprite display
 	
 ## v0.1.0
 
 ### Content
 
-	- Most of puzzlescript games should be playable.
-	- The game progression is saved locally
-	- Sfx emulation is not finished yet
-	- realtime games can be slow
+- Most of puzzlescript games should be playable.
+- The game progression is saved locally
+- Sfx emulation is not finished yet
+- realtime games can be slow
 
 ### Detail
 
@@ -50,15 +54,15 @@ PuzzlescriptWrapper is published under the terms of the LGPL v3 license (See bot
 [x]	saving/loading progression in ./data/localStorage
 [x]	it's now possible to pass a game in command line:
 
-	- if you specify a game file name it will search it in ./data/games/
-	- by default, PuzzlescriptWrapper launch ./data/games/game
+- if you specify a game file name it will search it in ./data/games/
+- by default, PuzzlescriptWrapper launch ./data/games/game
 		
 [x]	Show/Hide Framerate by hitting TAB key
 
 []	Sfx generation:
 
-	- The sound generator does not simulate correctly puzzlescript's one yet
-	- If you want to give it a try anyway (or if you want to fix it), you can set sfx to 'ON' in config.xml
+- The sound generator does not simulate correctly puzzlescript's one yet
+- If you want to give it a try anyway (or if you want to fix it), you can set sfx to 'ON' in config.xml
 
 ### Performance Note
 
@@ -66,6 +70,6 @@ I'm using [Duktape](http://duktape.org/) as the javascript engine to keep it sim
 
 #### Possible solutions:
 
-	- Rewrite part of puzzlescript engine in C++. It's probably a bad idea because processInput() function in puzzlescript/engine.js seems to be basically the whole engine.
-	- Switching to spidermonkey or v8
-	- Waiting for Duktape to implement the JIT feature
+- Rewrite part of puzzlescript engine in C++. It's probably a bad idea because processInput() function in puzzlescript/engine.js seems to be basically the whole engine.
+- Switching to spidermonkey or v8
+- Waiting for Duktape to implement the JIT feature
