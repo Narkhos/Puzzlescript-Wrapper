@@ -925,7 +925,7 @@ int main(int argc, char* argv[])
 	glewInit();
 
 	// INIT GAME LIST
-	GUI_List gameList(20, 20, 28, 200, 6, font, { 255 , 255 , 255, 255 });
+	GUI_List gameList(20, 20, 28, 200, 24, font, { 255 , 255 , 255, 255 });
 	gameList.initFromDirectory("./data/games/");
 
 	allowGameList = (gameList.entries.size() > 1);
