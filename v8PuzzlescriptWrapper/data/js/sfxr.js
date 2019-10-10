@@ -130,3 +130,13 @@ function cacheSeed(seed){
 
   return sound;
 }
+
+function killAudioButton(){}
+
+function showAudioButton(){}
+
+
+function toggleMute() {}
+
+function muteAudio() {}
+function unMuteAudio() {}

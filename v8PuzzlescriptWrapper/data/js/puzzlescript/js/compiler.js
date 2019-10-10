@@ -1,4 +1,4 @@
-//'use strict';
+'use strict';
 
 
 function isColor(str) {
@@ -204,12 +204,16 @@ function generateExtraMembers(state) {
                     } else {
                     	if (o.layer===undefined) {
                     		logError('Object "' + n.toUpperCase() + '" has been defined, but not assigned to a layer.',dat.lineNumber);
-                    	} else {                    		
-	                        logError(
-	                            'Trying to create an aggregate object (defined in the legend) with both "'
-	                            + n.toUpperCase() + '" and "' + state.idDict[mask[o.layer]].toUpperCase() + '", which are on the same layer and therefore can\'t coexist.',
-	                            dat.lineNumber
-	                            );
+                    	} else {
+                    		var n1 = n.toUpperCase();
+                    		var n2 = state.idDict[mask[o.layer]].toUpperCase();
+                    		if (n1!==n2){
+		                        logError(
+		                            'Trying to create an aggregate object (defined in the legend) with both "'
+		                            + n1 + '" and "' + n2 + '", which are on the same layer and therefore can\'t coexist.',
+		                            dat.lineNumber
+		                            );
+		                    }
 	                    }
                     }
                 }
@@ -440,8 +444,8 @@ function levelFromString(state,level) {
 		var cell = o.getCell(i);
 		if (!backgroundLayerMask.anyBitsInCommon(cell)) {
 			cell.ior(levelBackgroundMask);
+			o.setCell(i, cell);
 		}
-		o.setCell(i, cell);
 	}
 	return o;
 }
@@ -612,6 +616,7 @@ function processRuleString(rule, state, curRules)
 		logError("A rule has to have an arrow in it.  There's no arrow here! Consider reading up about rules - you're clearly doing something weird", lineNumber);
 	}
 
+	var curcell=[];
 	for (var i = 0; i < tokens.length; i++)
 	{
 		var token = tokens[i];
@@ -655,7 +660,7 @@ function processRuleString(rule, state, curRules)
 			}
 			case 1: {
 				if (token == '[') {
-					if (curcellrow.length > 0) {
+					if (curcell.length > 0) {
 						logError('Error, malformed cell rule - encountered a "["" before previous bracket was closed', lineNumber);
 					}
 					incellrow = true;
@@ -755,7 +760,7 @@ function processRuleString(rule, state, curRules)
 				logError('In a rule, each pattern to match on the left must have a corresponding pattern on the right of equal length (number of cells).', lineNumber);
 			}
 			if (lhs_cells[i].length == 0) {
-				logError("You have an totally empty pattern on the left-hand side.  This will match *everything*.  You certianly don't want this.");
+				logError("You have an totally empty pattern on the left-hand side.  This will match *everything*.  You certainly don't want this.");
 			}
 		}
 	}
@@ -1140,7 +1145,7 @@ function concretizePropertyRule(state, rule,lineNumber) {
 
 
 	if (rhsPropertyRemains.length > 0) {
-		logError('This rule has a property on the right-hand side, \"'+ rhsPropertyRemains + "\", that can't be inferred from the left-hand side.  (either for every property on the right there has to be a corresponding one on the left in the same cell, OR, if there's a single occurrence of a particular property name on the left, all properties of the same name on the right are assumed to be the same).",lineNumber);
+		logError('This rule has a property on the right-hand side, \"'+ rhsPropertyRemains.toUpperCase() + "\", that can't be inferred from the left-hand side.  (either for every property on the right there has to be a corresponding one on the left in the same cell, OR, if there's a single occurrence of a particular property name on the left, all properties of the same name on the right are assumed to be the same).",lineNumber);
 	}
 
 	return result;
@@ -1179,7 +1184,7 @@ function concretizeMovingRule(state, rule,lineNumber) {
 							for(var moveTerm in cur_rule.movingReplacement) {
 								if (cur_rule.movingReplacement.hasOwnProperty(moveTerm)) {
 									var moveDat = cur_rule.movingReplacement[moveTerm];
-									newrule.movingReplacement[moveTerm] = [moveDat[0],moveDat[1],moveDat[3]];
+									newrule.movingReplacement[moveTerm] = [moveDat[0],moveDat[1],moveDat[2]];
 								}
 							}
 
@@ -1246,7 +1251,9 @@ function concretizeMovingRule(state, rule,lineNumber) {
         for(var ambiguousMovement in ambiguous_movement_dict) {
         	if (ambiguous_movement_dict.hasOwnProperty(ambiguousMovement) && ambiguousMovement!=="INVALID") {
         		concreteMovement = ambiguous_movement_dict[ambiguousMovement];
-
+        		if (concreteMovement==="INVALID"){
+   					continue;
+        		}
 				for (var j=0;j<cur_rule.rhs.length;j++) {
 					var cellRow_rhs = cur_rule.rhs[j];
 					for (var k=0;k<cellRow_rhs.length;k++) {
@@ -1513,6 +1520,7 @@ function rulesToMask(state) {
 
 				var cell_r = cellrow_r[k];
 				var layersUsed_r = layerTemplate.concat([]);
+				var layersUsedRand_r = layerTemplate.concat([]);
 
 				var objectsClear = new BitVec(STRIDE_OBJ);
 				var objectsSet = new BitVec(STRIDE_OBJ);
@@ -1532,8 +1540,29 @@ function rulesToMask(state) {
 						break;
 					} else if (object_dir==='random') {
 						if (object_name in state.objectMasks) {
-							var mask = state.objectMasks[object_name];    
-							randomMask_r.ior(mask);                      
+							var mask = state.objectMasks[object_name];
+ 							randomMask_r.ior(mask);
+ 							var values;
+ 							if (state.propertiesDict.hasOwnProperty(object_name)) {
+ 								values = state.propertiesDict[object_name];
+ 							} else {
+ 								values = [object_name];
+ 							}
+ 							for (var m = 0; m < values.length; m++) {
+ 								var subobject = values[m];
+ 								var layerIndex = state.objects[subobject].layer|0;
+ 								var existingname = layersUsed_r[layerIndex];
+ 								if (existingname !== null) {
+ 									var o1 = subobject.toUpperCase();
+ 									var o2 = existingname.toUpperCase();
+ 									if (o1!==o2) {
+ 										logWarning("This rule may try to spawn a "+o1+" with random, but also requires a "+o2+" be here, which is on the same layer - they shouldn't be able to coexist!", rule.lineNumber); 									
+ 									}
+ 								}
+ 
+ 								layersUsedRand_r[layerIndex] = subobject;
+ 							}                      
+
 						} else {
 							logError('You want to spawn a random "'+object_name.toUpperCase()+'", but I don\'t know how to do that',rule.lineNumber);
 						}
@@ -1553,6 +1582,10 @@ function rulesToMask(state) {
 						objectsClear.ior(objectMask);
 					} else {
 						var existingname = layersUsed_r[layerIndex];
+						if (existingname === null) {
+ 							existingname = layersUsedRand_r[layerIndex];
+ 						}
+
 						if (existingname !== null) {
 							logError('Rule matches object types that can\'t overlap: "' + object_name.toUpperCase() + '" and "' + existingname.toUpperCase() + '".', rule.lineNumber);
 						}
@@ -2046,7 +2079,6 @@ function printRules(state) {
 }
 
 function removeDuplicateRules(state) {
-	console.log("rule count before = " +state.rules.length);
 	var record = {};
 	var newrules=[];
 	var lastgroupnumber=-1;
@@ -2064,7 +2096,6 @@ function removeDuplicateRules(state) {
 		}
 		lastgroupnumber=groupnumber;
 	}
-	console.log("rule count after = " +state.rules.length);
 }
 function generateLoopPoints(state) {
 	var loopPoint={};
@@ -2234,7 +2265,7 @@ function generateSoundData(state) {
 			var seed = sound[sound.length-2];
 
 			if (target in state.aggregatesDict) {
-				logError('cannot assign sound fevents to aggregate objects (declared with "and"), only to regular objects, or properties, things defined in terms of "or" ("'+target+'").',lineNumber);
+				logError('cannot assign sound events to aggregate objects (declared with "and"), only to regular objects, or properties, things defined in terms of "or" ("'+target+'").',lineNumber);
 			}
 			else if (target in state.objectMasks) {
 
@@ -2494,6 +2525,11 @@ function compile(command,text,randomseed) {
 	} finally {
 		compiling = false;
 	}
+
+	if (state && state.levels && state.levels.length===0){	
+		logError('No levels found.  Add some levels!',undefined,true);
+	}
+
 	if (errorCount>MAX_ERRORS) {
 		return;
 	}
