@@ -12,6 +12,12 @@ I didn't rewrite puzzlescript engine in C++. The javascript engine is embeded so
 
 PuzzlescriptWrapper is published under the terms of the LGPL v3 license (See both [GPL](https://www.gnu.org/licenses/gpl.txt) and [LGPL](https://www.gnu.org/licenses/lgpl.txt) Licenses for more details)
 
+## v2.0.1
+
+- Toggle fullscreen with Alt+Enter
+- Change window title on game selection
+- embeded puzzlescript engine updated to v1.6
+
 ## v2.0.0
 
 This is a rewrite of PuzzlescriptWrapper using visual studio and v8 javascript engine.
