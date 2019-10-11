@@ -18,7 +18,7 @@
  *************************************************************************************/
 
 #ifndef __PS_WRAPPER_VERSION__
-#define __PS_WRAPPER_VERSION__ "v2.0.0"
+#define __PS_WRAPPER_VERSION__ "v2.0.1"
 #endif
 
 // #define __USE_MINIFIED__
@@ -41,6 +41,8 @@
 #endif
 
 using namespace std;
+
+SDL_Window* window;
 
 class Config
 {
@@ -745,11 +747,12 @@ void initGame(string gameFile, v8::Isolate* isolate, string jsPath, string puzzl
 	updateCellHeight(isolate);
 
 	glClearColor((float)backgroundColor.r / 255.0, (float)backgroundColor.g / 255.0, (float)backgroundColor.b / 255.0, 1.0);
+	SDL_SetWindowTitle(window, gameTitle.c_str());
 }
 
 // CONTROLLERS MANAGEMENT
 
-map<int, SDL_GameController *> controllers; ///< Liste des controllers branchés
+map<int, SDL_GameController *> controllers; ///< Liste des controllers branchï¿½s
 
 int addController(int id)
 {
@@ -887,7 +890,6 @@ int main(int argc, char* argv[])
 	context->Global()->Set(v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "nativeClearRect"), v8::FunctionTemplate::New(v8::Isolate::GetCurrent(), nativeClearRect)->GetFunction());
 	context->Global()->Set(v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "drawImageNative"), v8::FunctionTemplate::New(v8::Isolate::GetCurrent(), drawImageNative)->GetFunction());
 
-	SDL_Window* window;
 	SDL_GLContext glContext;
 	SDL_Event event;
 
