@@ -15,11 +15,22 @@ var SHAPES = [
 
 var AUDIO_CONTEXT;
 
-if (typeof AudioContext != 'undefined') {
-  AUDIO_CONTEXT = new AudioContext();
-} else if (typeof webkitAudioContext != 'undefined') {
-  AUDIO_CONTEXT = new webkitAudioContext();
+function checkAudioContextExists(){
+  try{
+    if (AUDIO_CONTEXT==null){
+      if (typeof AudioContext != 'undefined') {
+        AUDIO_CONTEXT = new AudioContext();
+      } else if (typeof webkitAudioContext != 'undefined') {
+        AUDIO_CONTEXT = new webkitAudioContext();
+      }
+    }
+  }
+  catch (ex){
+    window.console.log(ex)
+  }
 }
+
+checkAudioContextExists();
 
 // Playback volume
 var masterVolume = 1.0;
@@ -596,7 +607,35 @@ SoundEffect.prototype.getBuffer = function() {
 };
 
 
+//unlock bullshit
+function ULBS(){   
+  if (AUDIO_CONTEXT.state === 'suspended')
+  {
+      var unlock = function()
+      {
+        AUDIO_CONTEXT.resume().then(function()
+          {
+            document.body.removeEventListener('touchstart', unlock);
+            document.body.removeEventListener('touchend', unlock);
+            document.body.removeEventListener('mousedown', unlock);
+            document.body.removeEventListener('mouseup', unlock);
+            document.body.removeEventListener('keydown', unlock);
+            document.body.removeEventListener('keyup', unlock);
+          });
+      };
+
+      document.body.addEventListener('touchstart', unlock, false);
+      document.body.addEventListener('touchend', unlock, false);
+      document.body.addEventListener('mousedown', unlock, false);
+      document.body.addEventListener('mouseup', unlock, false);
+      document.body.addEventListener('keydown', unlock, false);
+      document.body.addEventListener('keyup', unlock, false);
+  }
+}
+
 SoundEffect.prototype.play = function() {
+  ULBS();
+
   var source = AUDIO_CONTEXT.createBufferSource();
   var filter1 = AUDIO_CONTEXT.createBiquadFilter();
   var filter2 = AUDIO_CONTEXT.createBiquadFilter();
@@ -617,6 +656,9 @@ SoundEffect.prototype.play = function() {
     source.start(t);
   } else {
     source.noteOn(t);
+  }
+  source.onended = function() {
+    filter3.disconnect()
   }
 };
 
@@ -806,10 +848,12 @@ window.console.log(psstring);*/
     // Volume envelope
     env_time++;
     if (env_time > env_length[env_stage]) {
-      env_time = 0;
+      env_time = 1;
       env_stage++;
+      while (env_stage < 3 && env_length[env_stage] === 0)
+	env_stage++;
       if (env_stage === 3)
-        buffer_complete = true;
+        break;
     }
     if (env_stage === 0)
       env_vol = env_time / env_length[0];
@@ -913,19 +957,23 @@ window.console.log(psstring);*/
       buffer[buffer_i++] = sample;
       buffer[buffer_i++] = sample;
     }
+  }
 
-    if (buffer_complete) {
-      for (; buffer_i < buffer_length; buffer_i++) {
-        if (ps.sample_rate < SoundEffect.MIN_SAMPLE_RATE) {
-          buffer[buffer_i++] = 0;
-          buffer[buffer_i++] = 0;
-          buffer[buffer_i++] = 0;
-        }
-        buffer[buffer_i] = 0;
-      }
-      break;
+  if (summands > 0) {
+    sample = sample_sum / summands;
+
+    sample = sample / 8 * masterVolume;
+    sample *= gain;
+
+    buffer[buffer_i++] = sample;
+
+    if (ps.sample_rate < SoundEffect.MIN_SAMPLE_RATE) {
+      buffer[buffer_i++] = sample;
+      buffer[buffer_i++] = sample;
+      buffer[buffer_i++] = sample;
     }
   }
+
   return sound;
 };
 
@@ -963,8 +1011,63 @@ function cacheSeed(seed){
   return sound;
 }
 
+
 function playSound(seed) {
+  if (muted){
+    return;
+  }
+  checkAudioContextExists();
   if (unitTesting) return;
   var sound = cacheSeed(seed);
   sound.play();
+}
+
+
+
+function killAudioButton(){
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.remove();
+    umb.remove();
+  }
+}
+
+function showAudioButton(){
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.style.display="block"; 
+    umb.style.display="none";
+  }
+}
+
+
+function toggleMute() {
+  if (muted===0){
+    muteAudio();
+  } else {
+    unMuteAudio();
+  }
+}
+
+function muteAudio() {
+  muted=1; 
+  tryDeactivateYoutube();
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.style.display="none"; 
+    umb.style.display="block";
+  }
+}
+function unMuteAudio() {
+  muted=0; 
+  tryActivateYoutube();
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.style.display="block"; 
+    umb.style.display="none";
+  }
 }

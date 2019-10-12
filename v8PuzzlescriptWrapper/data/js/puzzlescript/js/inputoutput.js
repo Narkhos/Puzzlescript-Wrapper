@@ -369,7 +369,11 @@ function onKeyDown(event) {
 		prevent(event);
 	}
 
+	if ((!IDE) && event.keyCode===77){//m
+		toggleMute();		
+	}
 
+	
     if (keybuffer.indexOf(event.keyCode)>=0) {
     	return;
     }
@@ -389,6 +393,9 @@ function onKeyDown(event) {
             prevent(event);
         } else if (event.keyCode===75 && (event.ctrlKey||event.metaKey)) {//ctrl+k
             makeGIF();
+            prevent(event);
+        }  else if (event.keyCode===83 && (event.ctrlKey||event.metaKey)) {//ctrl+s
+            saveClick();
             prevent(event);
         } 
     }
@@ -517,6 +524,11 @@ function checkKey(e,justPressed) {
             inputdir=2;
         break;
         }
+        case 80://p
+        {
+			printLevel();
+        	break;
+        }
         case 13://enter
         case 32://space
         case 67://c
@@ -567,6 +579,13 @@ function checkKey(e,justPressed) {
         case 69: {//e
         	if (canOpenEditor) {
         		if (justPressed) {
+        			if (titleScreen){
+        				if (state.title==="EMPTY GAME"){
+        					compile(["loadFirstNonMessageLevel"]);
+        				} else {
+        					nextLevel();
+        				}
+        			}
         			levelEditorOpened=!levelEditorOpened;
         			if (levelEditorOpened===false){
         				printLevel();

@@ -203,9 +203,7 @@ function redraw() {
         for (var i = 0; i < titleWidth; i++) {
             for (var j = 0; j < titleHeight; j++) {
                 var ch = titleImage[j].charAt(i);
-				
                 if (ch in textImages) {
-					//if(ch!==' ') print(ch);
                     var sprite = textImages[ch];
                     ctx.drawImage(sprite, xoffset + i * cellwidth, yoffset + j * cellheight);                   
                 }

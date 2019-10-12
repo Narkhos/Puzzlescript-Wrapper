@@ -18,7 +18,7 @@
  *************************************************************************************/
 
 #ifndef __PS_WRAPPER_VERSION__
-#define __PS_WRAPPER_VERSION__ "v2.0.0"
+#define __PS_WRAPPER_VERSION__ "v2.0.1"
 #endif
 
 // #define __USE_MINIFIED__
@@ -41,6 +41,8 @@
 #endif
 
 using namespace std;
+
+SDL_Window* window;
 
 class Config
 {
@@ -257,7 +259,10 @@ vector<spriteInstance> instances;
 
 int width = 1024;
 int height = 768;
+int windowedWidth = 1024;
+int windowedHeight = 768;
 bool fullscreen = false;
+
 int cellWidth;
 int cellHeight;
 int puzzlescriptInterval;
@@ -734,17 +739,20 @@ void initGame(string gameFile, v8::Isolate* isolate, string jsPath, string puzzl
 
 	executeJavascriptFile(context, jsPath + "overload.js");
 
-	executeJavascript(context, loadGame("./data/games/" + gameFile).c_str());
+	executeJavascript(context, loadGame("./data/games/" + gameFile));
 
 	gameTitle = getTitle(isolate);
 	backgroundColor = getBackgroundColor(isolate);
 	updateCellWidth(isolate);
 	updateCellHeight(isolate);
+
+	glClearColor((float)backgroundColor.r / 255.0, (float)backgroundColor.g / 255.0, (float)backgroundColor.b / 255.0, 1.0);
+	SDL_SetWindowTitle(window, gameTitle.c_str());
 }
 
 // CONTROLLERS MANAGEMENT
 
-map<int, SDL_GameController *> controllers; ///< Liste des controllers branchés
+map<int, SDL_GameController *> controllers; ///< Liste des controllers branchï¿½s
 
 int addController(int id)
 {
@@ -781,6 +789,30 @@ void foundControllers()
 	}
 }
 
+void windowResize(int w, int h, v8::Isolate* isolate)
+{
+	width = w;
+	height = h;
+	glViewport(0, 0, width, height);
+	glLoadIdentity();
+
+	glOrtho(0, width, height, 0, -1, 1);
+
+	stringstream windowChange;
+	windowChange << "canvas.parentNode.clientWidth = " << width << ";\n";
+	windowChange << "canvas.parentNode.clientHeight = " << height << ";";
+	executeJavascript(context, windowChange.str());
+
+	updateCellWidth(isolate);
+	updateCellHeight(isolate);
+
+	for (int i = 0; i < sprites.size(); i++)
+	{
+		sprites[i]->init(cellWidth, cellHeight);
+	}
+	executeJavascript(context, "forceRegenImages=true;");
+	executeJavascript(context, "canvasResize()");
+}
 
 // MAIN
 int main(int argc, char* argv[])
@@ -802,6 +834,9 @@ int main(int argc, char* argv[])
 	height = config.data["height"];
 	sfxOn = config.data["sfx"];
 	fullscreen = config.data["fullscreen"];
+
+	windowedWidth = width;
+	windowedHeight = height;
 
 	if (argc > 1)
 	{
@@ -855,7 +890,6 @@ int main(int argc, char* argv[])
 	context->Global()->Set(v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "nativeClearRect"), v8::FunctionTemplate::New(v8::Isolate::GetCurrent(), nativeClearRect)->GetFunction());
 	context->Global()->Set(v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "drawImageNative"), v8::FunctionTemplate::New(v8::Isolate::GetCurrent(), drawImageNative)->GetFunction());
 
-	SDL_Window* window;
 	SDL_GLContext glContext;
 	SDL_Event event;
 
@@ -887,7 +921,7 @@ int main(int argc, char* argv[])
 	foundControllers();
 
 	Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
-	if (fullscreen) flags = flags | SDL_WINDOW_FULLSCREEN;
+	if (fullscreen) flags = flags | SDL_WINDOW_FULLSCREEN_DESKTOP;
 	window = SDL_CreateWindow(gameTitle.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, flags);
 
 	if (window == nullptr)
@@ -987,6 +1021,8 @@ int main(int argc, char* argv[])
 		updatePuzzlescript(isolate, deltaTime);
 
 		// INPUTS
+		SDL_Keymod keyMod = SDL_GetModState();
+
 		while (SDL_PollEvent(&event) != 0)
 		{
 			switch (event.type)
@@ -1087,34 +1123,36 @@ int main(int argc, char* argv[])
 				case SDL_WINDOWEVENT:
 					if (event.window.event == SDL_WINDOWEVENT_RESIZED)
 					{
-						glViewport(0, 0, event.window.data1, event.window.data2);
-						glLoadIdentity();
-						width = event.window.data1;
-						height = event.window.data2;
-						glOrtho(0, width, height, 0, -1, 1);
-						
-						stringstream windowChange;
-						windowChange << "canvas.parentNode.clientWidth = " << width << ";\n";
-						windowChange << "canvas.parentNode.clientHeight = " << height << ";";
-						executeJavascript(context, windowChange.str());
-
-						updateCellWidth(isolate);
-						updateCellHeight(isolate);
-
-						for (int i = 0; i < sprites.size(); i++)
-						{
-							sprites[i]->init(cellWidth, cellHeight);
-						}
-						executeJavascript(context, "forceRegenImages=true;");
-						executeJavascript(context, "canvasResize()");
+						windowResize(event.window.data1, event.window.data2, isolate);
 					}
 					break;
 				case SDL_QUIT:
 					running = false;
 					break;
 				case SDL_KEYDOWN:
-					if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_RETURN
-						|| event.key.keysym.sym == SDLK_c || event.key.keysym.sym == SDLK_x)
+					if (event.key.keysym.sym == SDLK_RETURN)
+					{
+						if (keyMod & KMOD_ALT)
+						{
+							if (fullscreen)
+							{
+								SDL_SetWindowFullscreen(window, 0);
+								cout << width << ", " << height << endl;
+								windowResize(windowedWidth, windowedHeight, isolate);
+								fullscreen = false;
+							}
+							else
+							{
+								windowedWidth = width;
+								windowedHeight = height;
+								SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+								fullscreen = true;
+							}
+						}
+					}
+
+					if ((event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_RETURN
+						|| event.key.keysym.sym == SDLK_c || event.key.keysym.sym == SDLK_x) && !(keyMod & KMOD_ALT))
 					{
 						executeJavascript(context, "onKeyDown({keyCode: 13})");
 					}
@@ -1217,8 +1255,8 @@ int main(int argc, char* argv[])
 
 					break;
 				case SDL_KEYUP:
-					if (event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_RETURN
-						|| event.key.keysym.sym == SDLK_c || event.key.keysym.sym == SDLK_x)
+					if ((event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_RETURN
+						|| event.key.keysym.sym == SDLK_c || event.key.keysym.sym == SDLK_x) && !(keyMod & KMOD_ALT))
 					{
 						executeJavascript(context, "onKeyUp({keyCode: 13})");
 					}
