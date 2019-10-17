@@ -28,6 +28,7 @@
 #include <map>
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <SDL_mixer.h>
 #include <GL/glew.h>
 #include <v8.h>
 #include <libplatform/libplatform.h>
@@ -254,6 +255,46 @@ public:
 	}
 };
 
+class Sfx
+{
+	public:
+		Mix_Chunk* chunk;
+		SfxrSound* sfxrSound;
+
+	Sfx(const string seed, SfxrSound* _sfxrSound)
+	{
+		string supportedFormatList[] = {"mp3", "ogg", "wav", "aiff", "voc","mod", "xm", "s3m", "669", "it", "med", "mid" };
+		for (int i = 0; i < 12; i++)
+		{
+			stringstream ss;
+			ss << "./data/sfx/" << seed << "." << supportedFormatList[i];
+			this->chunk = Mix_LoadWAV(ss.str().c_str());
+
+			if (this->chunk != nullptr) break;
+		}
+
+		this->sfxrSound = _sfxrSound;
+	}
+
+	~Sfx()
+	{
+		if (this->chunk != nullptr) Mix_FreeChunk(this->chunk);
+		if (this->sfxrSound != nullptr) delete this->sfxrSound;
+	}
+
+	void playSample()
+	{
+		if (this->chunk != nullptr)
+		{
+			Mix_PlayChannel(-1, this->chunk, 0);
+		}
+		else
+		{
+			this->sfxrSound->playSample();
+		}
+	}
+};
+
 vector<PuzzlescriptSprite*> sprites;
 vector<spriteInstance> instances;
 
@@ -272,7 +313,9 @@ string gameTitle;
 bool sfxOn=true;
 bool showFPS = false;
 
-map<unsigned int, SfxrSound*> soundList;
+Mix_Music *music = nullptr;
+map<unsigned int, Sfx*> soundList;
+// map<unsigned int, SfxrSound*> soundList;
 
 rgbColor webColorToRGB(const char* fillStyle)
 {
@@ -362,54 +405,58 @@ void nativeGenerateSound(const v8::FunctionCallbackInfo<v8::Value>& args)
 	if (sfxOn)
 	{
 		unsigned int seed = (args[0]->Int32Value(context)).FromMaybe(0);
+		if (soundList[seed] == nullptr)
+		{
+			SfxrSound* sfxrSound = new SfxrSound(
+				// Envelope
+				(float)(args[1]->NumberValue(context)).FromMaybe(0),
+				(float)(args[2]->NumberValue(context)).FromMaybe(0),
+				(float)(args[3]->NumberValue(context)).FromMaybe(0),
+				(float)(args[4]->NumberValue(context)).FromMaybe(0),
 
-		soundList[seed] = new SfxrSound(
-			// Envelope
-			(float)(args[1]->NumberValue(context)).FromMaybe(0),
-			(float)(args[2]->NumberValue(context)).FromMaybe(0),
-			(float)(args[3]->NumberValue(context)).FromMaybe(0),
-			(float)(args[4]->NumberValue(context)).FromMaybe(0),
+				// Tone
+				(float)(args[5]->NumberValue(context)).FromMaybe(0),
+				(float)(args[6]->NumberValue(context)).FromMaybe(0),
+				(float)(args[7]->NumberValue(context)).FromMaybe(0),
+				(float)(args[8]->NumberValue(context)).FromMaybe(0),
 
-			// Tone
-			(float)(args[5]->NumberValue(context)).FromMaybe(0),
-			(float)(args[6]->NumberValue(context)).FromMaybe(0),
-			(float)(args[7]->NumberValue(context)).FromMaybe(0),
-			(float)(args[8]->NumberValue(context)).FromMaybe(0),
+				// Vibrato
+				(float)(args[9]->NumberValue(context)).FromMaybe(0),
+				(float)(args[10]->NumberValue(context)).FromMaybe(0),
 
-			// Vibrato
-			(float)(args[9]->NumberValue(context)).FromMaybe(0),
-			(float)(args[10]->NumberValue(context)).FromMaybe(0),
+				// Tonal change
+				(float)(args[11]->NumberValue(context)).FromMaybe(0),
+				(float)(args[12]->NumberValue(context)).FromMaybe(0),
 
-			// Tonal change
-			(float)(args[11]->NumberValue(context)).FromMaybe(0),
-			(float)(args[12]->NumberValue(context)).FromMaybe(0),
+				// Duty
+				(float)(args[13]->NumberValue(context)).FromMaybe(0),
+				(float)(args[14]->NumberValue(context)).FromMaybe(0),
 
-			// Duty
-			(float)(args[13]->NumberValue(context)).FromMaybe(0),
-			(float)(args[14]->NumberValue(context)).FromMaybe(0),
+				// Repeat
+				(float)(args[15]->NumberValue(context)).FromMaybe(0),
 
-			// Repeat
-			(float)(args[15]->NumberValue(context)).FromMaybe(0),
+				// Phaser
+				(float)(args[16]->NumberValue(context)).FromMaybe(0),
+				(float)(args[17]->NumberValue(context)).FromMaybe(0),
 
-			// Phaser
-			(float)(args[16]->NumberValue(context)).FromMaybe(0),
-			(float)(args[17]->NumberValue(context)).FromMaybe(0),
+				// Low-pass filter
+				(float)(args[18]->NumberValue(context)).FromMaybe(0),
+				(float)(args[19]->NumberValue(context)).FromMaybe(0),
+				(float)(args[20]->NumberValue(context)).FromMaybe(0),
 
-			// Low-pass filter
-			(float)(args[18]->NumberValue(context)).FromMaybe(0),
-			(float)(args[19]->NumberValue(context)).FromMaybe(0),
-			(float)(args[20]->NumberValue(context)).FromMaybe(0),
+				// High-pass filter
+				(float)(args[21]->NumberValue(context)).FromMaybe(0),
+				(float)(args[22]->NumberValue(context)).FromMaybe(0),
 
-			// High-pass filter
-			(float)(args[21]->NumberValue(context)).FromMaybe(0),
-			(float)(args[22]->NumberValue(context)).FromMaybe(0),
+				// Main parameters
+				(float)(args[23]->NumberValue(context)).FromMaybe(0),
+				(args[24]->Int32Value(context)).FromMaybe(0),
+				(args[25]->Int32Value(context)).FromMaybe(0),
+				(args[26]->Int32Value(context)).FromMaybe(0)
+			);
 
-			// Main parameters
-			(float)(args[23]->NumberValue(context)).FromMaybe(0),
-			(args[24]->Int32Value(context)).FromMaybe(0),
-			(args[25]->Int32Value(context)).FromMaybe(0),
-			(args[26]->Int32Value(context)).FromMaybe(0)
-		);
+			soundList[seed] = new Sfx(to_string(seed), sfxrSound);
+		}
 	}
 }
 
@@ -563,6 +610,14 @@ string getTitle(v8::Isolate* isolate)
 	v8::String::Utf8Value gameTitle(isolate, result);
 
 	return *gameTitle;
+}
+
+string getMusic(v8::Isolate* isolate)
+{
+	v8::Local<v8::Value> result = executeJavascript(context, "state.metadata.youtube");
+	v8::String::Utf8Value gameMusic(isolate, result);
+
+	return *gameMusic;
 }
 
 rgbColor getBackgroundColor(v8::Isolate* isolate)
@@ -742,12 +797,36 @@ void initGame(string gameFile, v8::Isolate* isolate, string jsPath, string puzzl
 	executeJavascript(context, loadGame("./data/games/" + gameFile));
 
 	gameTitle = getTitle(isolate);
+	string gameMusic = getMusic(isolate);
 	backgroundColor = getBackgroundColor(isolate);
 	updateCellWidth(isolate);
 	updateCellHeight(isolate);
 
 	glClearColor((float)backgroundColor.r / 255.0, (float)backgroundColor.g / 255.0, (float)backgroundColor.b / 255.0, 1.0);
 	SDL_SetWindowTitle(window, gameTitle.c_str());
+
+	// INIT GAME MUSIC
+
+	if (music != nullptr)
+	{
+		Mix_FreeMusic(music);
+		music = nullptr;
+	}
+
+	string supportedFormatList[] = { "mp3", "ogg", "wav", "aiff", "voc","mod", "xm", "s3m", "669", "it", "med", "mid" };
+	for (int i = 0; i < 12; i++)
+	{
+		stringstream ss;
+		ss << "./data/music/" << gameMusic << "." << supportedFormatList[i];
+		music = Mix_LoadMUS(ss.str().c_str());
+
+		if (music != nullptr)
+		{
+			Mix_PlayMusic(music, -1);
+			Mix_VolumeMusic(MIX_MAX_VOLUME / 50);
+			break;
+		}
+	}
 }
 
 // CONTROLLERS MANAGEMENT
@@ -906,6 +985,12 @@ int main(int argc, char* argv[])
 		msg.append(SDL_GetError());
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Init Failed", msg.c_str(), nullptr);
 		return 0;
+	}
+
+	if (Mix_OpenAudio(44100, AUDIO_S16SYS, 2, 1024) < 0)
+	{
+		printf("Error initializing SDL_mixer: %s\n", Mix_GetError());
+		exit(1);
 	}
 
 	int nbMappingsAdded = SDL_GameControllerAddMappingsFromFile("./data/gamecontrollerdb.txt");
@@ -1379,6 +1464,7 @@ int main(int argc, char* argv[])
 	glContext = nullptr;
 	SDL_DestroyWindow(window);
 	window = nullptr;
+	Mix_CloseAudio();
 	SDL_Quit();
 
 	// Shutdown V8 javascript engine.
