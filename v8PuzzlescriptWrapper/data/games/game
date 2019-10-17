@@ -3,6 +3,7 @@ author Xavier Direz
 homepage www.lafaceobscuredupixel.fr
 run_rules_on_level_start
 require_player_movement
+
 ========
 OBJECTS
 ========
@@ -132,8 +133,8 @@ CrateDownFlag = CrateOnDownFlag or CrateOffDownFlag
 SOUNDS
 =======
 
-Crate MOVE 87345902
 sfx0 3774300
+sfx1 87345902
 
 ================
 COLLISIONLAYERS
@@ -166,7 +167,7 @@ down [WallVisible | no Wall]->[WallVisible|WallDown]
 [ >  Player | Crate ] -> [ > Player | > Crate  ]
 
 [> Crate | Target]->[> CrateOnTarget | Target] sfx0 
-[> Crate | no Target]->[> CrateOffTarget|]
+[> Crate | no Target]->[> CrateOffTarget|] sfx1
 
 down [ PlayerEars | no Player]->[ no PlayerEars | no Player]
 
