@@ -92,13 +92,13 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x86.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\v8PuzzlescriptWrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SDKs\SDL2_image-2.0.5\include;C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x86.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\v8PuzzlescriptWrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_ttf.lib;v8.dll.lib;v8_libplatform.dll.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\SDKs\v8\v8-v141-x86.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x86;C:\SDKs\glew-2.1.0\lib\Release\Win32;C:\SDKs\SDL2_ttf-2.0.15\lib\x86;C:\SDKs\SDL2_mixer-2.0.4\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_Image.lib;SDL2_ttf.lib;v8.dll.lib;v8_libplatform.dll.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\SDKs\SDL2_image-2.0.5\lib\x86;C:\SDKs\v8\v8-v141-x86.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x86;C:\SDKs\glew-2.1.0\lib\Release\Win32;C:\SDKs\SDL2_ttf-2.0.15\lib\x86;C:\SDKs\SDL2_mixer-2.0.4\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>XCOPY "$(ProjectDir)data" "$(TargetDir)data" /E /I /F /Y</Command>
@@ -113,14 +113,14 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x64.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\v8PuzzlescriptWrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SDKs\SDL2_image-2.0.5\include;C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x64.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\Puzzlescript-Wrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_mixer.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\SDKs\v8\v8-v141-x64.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x64;C:\SDKs\glew-2.1.0\lib\Release\x64;C:\SDKs\SDL2_ttf-2.0.15\lib\x64;C:\SDKs\SDL2_mixer-2.0.4\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_Image.lib;SDL2_mixer.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\SDKs\SDL2_image-2.0.5\lib\x64;C:\SDKs\v8\v8-v141-x64.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x64;C:\SDKs\glew-2.1.0\lib\Release\x64;C:\SDKs\SDL2_ttf-2.0.15\lib\x64;C:\SDKs\SDL2_mixer-2.0.4\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>XCOPY "$(ProjectDir)data" "$(TargetDir)data" /E /I /F /Y</Command>
@@ -137,7 +137,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x86.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\v8PuzzlescriptWrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SDKs\SDL2_image-2.0.5\include;C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x86.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\Puzzlescript-Wrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -145,8 +145,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_ttf.lib;v8.dll.lib;v8_libplatform.dll.lib;SDL2_mixer.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\SDKs\v8\v8-v141-x86.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x86;C:\SDKs\glew-2.1.0\lib\Release\Win32;C:\SDKs\SDL2_ttf-2.0.15\lib\x86;C:\SDKs\SDL2_mixer-2.0.4\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_Image.lib;SDL2_ttf.lib;v8.dll.lib;v8_libplatform.dll.lib;SDL2_mixer.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\SDKs\SDL2_image-2.0.5\lib\x86;C:\SDKs\v8\v8-v141-x86.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x86;C:\SDKs\glew-2.1.0\lib\Release\Win32;C:\SDKs\SDL2_ttf-2.0.15\lib\x86;C:\SDKs\SDL2_mixer-2.0.4\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>XCOPY "$(ProjectDir)data" "$(TargetDir)data" /E /I /F /Y</Command>
@@ -163,7 +163,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x64.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\v8PuzzlescriptWrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\SDKs\SDL2_image-2.0.5\include;C:\SDKs\glm;C:\SDKs\SDL2-2.0.10\include;C:\SDKs\glew-2.1.0\include;C:\SDKs\v8\v8-v141-x64.7.1.302.33\include;C:\SDKs\SDL2_ttf-2.0.15\include;C:\Users\Narkhos\source\repos\Puzzlescript-Wrapper\v8PuzzlescriptWrapper\gameEngine;C:\SDKs\SDL2_mixer-2.0.4\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -171,8 +171,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_mixer.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\SDKs\v8\v8-v141-x64.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x64;C:\SDKs\glew-2.1.0\lib\Release\x64;C:\SDKs\SDL2_ttf-2.0.15\lib\x64;C:\SDKs\SDL2_mixer-2.0.4\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>SDL2.lib;SDL2Main.lib;SDL2_Image.lib;SDL2_mixer.lib;glew32.lib;v8.dll.lib;v8_libplatform.dll.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\SDKs\SDL2_image-2.0.5\lib\x64;C:\SDKs\v8\v8-v141-x64.7.1.302.33\lib\Release;C:\SDKs\SDL2-2.0.10\lib\x64;C:\SDKs\glew-2.1.0\lib\Release\x64;C:\SDKs\SDL2_ttf-2.0.15\lib\x64;C:\SDKs\SDL2_mixer-2.0.4\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>XCOPY "$(ProjectDir)data" "$(TargetDir)data" /E /I /F /Y</Command>
