@@ -8,7 +8,7 @@ int bufferLength;
 
 double gain;
 double sound_vol = 0.5;
-float master_vol=0.05f;
+float sfxr_master_vol =0.05f;
 bool playing_sample=false;
 
 int phase;
@@ -273,7 +273,7 @@ void SynthSample(int length, float* buffer)
 			// final accumulation and envelope application
 			ssample+=sample*env_vol;
 		}
-		ssample=ssample/8*master_vol;
+		ssample=ssample/8*sfxr_master_vol;
 
 		ssample*=2.0f*sound->sound_vol;
 
@@ -544,7 +544,7 @@ std::vector<float> generate()
             // Final accumulation and envelope application
             sample += sub_sample * env_vol;
         }
-        sample = sample / 8.0f * master_vol;
+        sample = sample / 8.0f * sfxr_master_vol;
         sample *= gain;
 
         output.push_back(sample);
@@ -577,8 +577,9 @@ static void SDLAudioCallback(void *userdata, Uint8 *stream, int len)
 
 void initSfxr()
 {
-	SDL_AudioDeviceID dev;
     bufferLength = 512;
+	// return;
+	SDL_AudioDeviceID dev;
 
 	des.freq = 44100; // 22050; // 5512; //
 	des.format = AUDIO_S16SYS; // AUDIO_S8; //
@@ -597,6 +598,28 @@ void initSfxr()
 
 // class SfxrSound
 
+Mix_Chunk* SfxrSound::generateSound()
+{
+	sound = this;
+	ResetSample(false);
+
+	Mix_Chunk* chunk = new Mix_Chunk();
+	playing_sample = true;
+	Uint8 abuf[500000] = { 0 };
+	int i = 0;
+	do
+	{
+		SDLAudioCallback(nullptr, abuf + bufferLength * i, bufferLength * 2);
+		i++;
+	} while (playing_sample);
+
+	chunk->abuf = abuf;
+	chunk->alen = i * bufferLength;
+	chunk->allocated = true;
+	chunk->volume = MIX_MAX_VOLUME;
+
+	return chunk;
+}
 
 // Constructors
 SfxrSound::SfxrSound()

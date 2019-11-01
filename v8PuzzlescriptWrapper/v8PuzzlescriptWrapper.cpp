@@ -18,7 +18,7 @@
  *************************************************************************************/
 
 #ifndef __PS_WRAPPER_VERSION__
-#define __PS_WRAPPER_VERSION__ "v2.0.1"
+#define __PS_WRAPPER_VERSION__ "v2.0.2"
 #endif
 
 // #define __USE_MINIFIED__
@@ -44,6 +44,111 @@
 using namespace std;
 
 SDL_Window* window;
+
+struct rgbColor
+{
+	int r;
+	int g;
+	int b;
+};
+
+class DiscreetGauge
+{
+	public:
+		vector<GUI_Button> buttonList;
+		TTF_Font* font;
+		GLuint labelTexId;
+		float x;
+		float y;
+		int value;
+		wstring label;
+		int label_w;
+		int label_h;
+		rgbColor textColor;
+
+		DiscreetGauge(
+			int initValue,
+			int textureButton,
+			int textureButtonZero,
+			float _x,
+			float _y,
+			float buttonWidth,
+			float buttonHeight,
+			int length,
+			TTF_Font* _font,
+			wstring _label,
+			rgbColor _textColor)
+			:value(initValue), x(_x), y(_y), font(_font), textColor(_textColor), label(_label)
+		{
+			SDL_Color couleur = { textColor.r , textColor.g , textColor.b, 255 };
+			labelTexId = texteToTexture(font, couleur, _label, this->label_w, this->label_h);
+
+			int idTextureButton = textureButtonZero;
+			for (int i = 0; i < length; i++)
+			{
+				buttonList.push_back(GUI_Button(idTextureButton, _x + (i * buttonWidth), _y + this->label_h, buttonWidth, buttonHeight, 2));
+				idTextureButton = textureButton;
+			}
+
+			this->updateButtons();
+		}
+
+		void updateTextColor(const rgbColor &newColor)
+		{
+			if (newColor.r != this->textColor.r
+				|| newColor.g != this->textColor.g
+				|| newColor.b != this->textColor.b)
+			{
+				this->textColor = newColor;
+				SDL_Color couleur = { textColor.r , textColor.g , textColor.b, 255 };
+				glDeleteTextures(1, &labelTexId);
+				labelTexId = texteToTexture(font, couleur, this->label, this->label_w, this->label_h);
+			}
+		}
+
+		void updateButtons()
+		{
+			// Change state of each button in the gauge
+			for (int i = 0; i < this->buttonList.size(); i++)
+			{
+				buttonList[i].setEtat(i <= this->value ? 0 : 1);
+			}
+		}
+
+		int onClick(int mouse_x, int mouse_y)
+		{
+			int newIndex = -1;
+			for (int i = 0; i < this->buttonList.size(); i++)
+			{
+				if (this->buttonList[i].isIn(mouse_x, mouse_y))
+				{
+					newIndex = i;
+					break;
+				}
+			}
+
+			if (newIndex == -1)
+			{
+				return -1; // The user does not clicked this gauge
+			}
+
+			this->value = newIndex;
+
+			this->updateButtons();
+
+			return this->value; // return gauge value (changed or not)
+		}
+
+		void draw()
+		{
+			drawImage(labelTexId, x, y, (float)this->label_w, (float)this->label_h, 1.0f);
+			for (int i = 0; i < this->buttonList.size(); i++)
+			{
+				buttonList[i].draw();
+			}
+		}
+
+};
 
 class Config
 {
@@ -95,99 +200,11 @@ TTF_Font* loadFont(string filepath)
 	return font;
 }
 
-void updateAndDrawFPS(int currentTime)
-{
-	static int frame = 0;
-	static GLuint texId = 0;
-	static int w = 0;
-	static int h = 0;
-
-	frame++;
-
-	static int prec_time = 0;
-
-	int deltatime = currentTime - prec_time;
-
-	if (deltatime >= 1000)
-	{
-		SDL_Color couleur = { 255 , 255 , 255, 255 };
-
-		if (texId > 0) glDeleteTextures(1, &texId);
-		wstringstream ss;
-		ss << L"FPS: " << frame;
-		texId = texteToTexture(font, couleur, ss.str(), w, h);
-		prec_time = currentTime;
-		frame = 0;
-	}
-
-	// Draw FPS texture
-	if (texId > 0)
-	{
-		drawImage(texId, 4, 0, (float)w, (float)h, 1.0f);
-	}
-
-}
-
-GLuint SurfaceToTexture(SDL_Surface *surface)
-{
-	//return createRedTexture();
-	GLuint tid;
-	GLenum texture_format;
-	GLint ncolors;
-	SDL_Surface* s = surface;
-
-	/* Convert SDL_Surface to OpenGL Texture */
-	ncolors = s->format->BytesPerPixel;
-	if (ncolors == 4) {
-		//alpha channel
-		if (s->format->Rmask == 0x000000ff)
-		{
-			texture_format = GL_RGBA;
-		}
-		else
-		{
-			texture_format = GL_BGRA;
-		}
-	}
-	else {
-		if (ncolors == 3) {
-			//no alpha channel
-			if (s->format->Rmask == 0x0000ff)
-				texture_format = GL_RGB;
-			else
-				texture_format = GL_BGR;
-		}
-		else {
-			return 0;
-		}
-	}
-
-	glGenTextures(1, &tid);
-	glBindTexture(GL_TEXTURE_2D, tid);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, ncolors, s->w, s->h, 0,
-		texture_format, GL_UNSIGNED_BYTE, s->pixels);
-
-	return tid;
-}
-
-
 struct spriteInstance
 {
 	int id;
 	int x;
 	int y;
-};
-
-struct rgbColor
-{
-	int r;
-	int g;
-	int b;
 };
 
 class PuzzlescriptSprite
@@ -255,6 +272,12 @@ public:
 	}
 };
 
+int chunk_volume_index = 8;
+int chunk_volume_scale[] = {0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128};
+
+int sfxr_volume_index = 8;
+float sfxr_volume_scale[] = {0.0f, 0.05f, 0.10f, 0.15f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.45f, 0.5f, 0.55f, 0.6f, 0.65f, 0.7f, 0.75f, 0.8f};
+
 class Sfx
 {
 	public:
@@ -274,6 +297,12 @@ class Sfx
 		}
 
 		this->sfxrSound = _sfxrSound;
+
+		/*if (this->chunk == nullptr)
+		{
+			this->chunk = this->sfxrSound->generateSound();
+		}*/
+
 	}
 
 	~Sfx()
@@ -286,6 +315,7 @@ class Sfx
 	{
 		if (this->chunk != nullptr)
 		{
+			Mix_VolumeChunk(chunk, chunk_volume_scale[chunk_volume_index]);
 			Mix_PlayChannel(-1, this->chunk, 0);
 		}
 		else
@@ -303,19 +333,65 @@ int height = 768;
 int windowedWidth = 1024;
 int windowedHeight = 768;
 bool fullscreen = false;
+int showMouseHud = 0;
+int MouseHudDelay = 2000;
 
 int cellWidth;
 int cellHeight;
 int puzzlescriptInterval;
 rgbColor backgroundColor;
+rgbColor foregroundColor;
 string gameTitle;
 
 bool sfxOn=true;
+bool musicOn=true;
 bool showFPS = false;
 
 Mix_Music *music = nullptr;
+int music_volume_index = 8;
+int music_volume_scale[] = {0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128};
+
+int getMusicVolume()
+{
+	return (musicOn == true) ? music_volume_scale[music_volume_index] : 0;
+}
+
 map<unsigned int, Sfx*> soundList;
 // map<unsigned int, SfxrSound*> soundList;
+
+void updateAndDrawFPS(int currentTime, v8::Isolate* isolate)
+{
+	static int frame = 0;
+	static GLuint texId = 0;
+	static int w = 0;
+	static int h = 0;
+
+	frame++;
+
+	static int prec_time = 0;
+
+	int deltatime = currentTime - prec_time;
+
+	if (deltatime >= 1000)
+	{
+		cout << "foreground color: " << foregroundColor.r << ", " << foregroundColor.g << ", " << foregroundColor.b << endl;
+		SDL_Color couleur = { foregroundColor.r, foregroundColor.g, foregroundColor.b, 255 };
+
+		if (texId > 0) glDeleteTextures(1, &texId);
+		wstringstream ss;
+		ss << L"FPS: " << frame;
+		texId = texteToTexture(font, couleur, ss.str(), w, h);
+		prec_time = currentTime;
+		frame = 0;
+	}
+
+	// Draw FPS texture
+	if (texId > 0)
+	{
+		drawImage(texId, 22, 0, (float)w, (float)h, 1.0f);
+	}
+
+}
 
 rgbColor webColorToRGB(const char* fillStyle)
 {
@@ -629,6 +705,15 @@ rgbColor getBackgroundColor(v8::Isolate* isolate)
 	return backgroundColor;
 }
 
+rgbColor getForegroundColor(v8::Isolate* isolate)
+{
+	v8::Local<v8::Value> result = executeJavascript(context, "state.fgcolor");
+	v8::String::Utf8Value bg(isolate, result);
+	rgbColor foregroundColor = webColorToRGB(*bg);
+
+	return foregroundColor;
+}
+
 bool updateCellWidth(v8::Isolate* isolate)
 {
 	static int precCellWidth = 0;
@@ -799,6 +884,7 @@ void initGame(string gameFile, v8::Isolate* isolate, string jsPath, string puzzl
 	gameTitle = getTitle(isolate);
 	string gameMusic = getMusic(isolate);
 	backgroundColor = getBackgroundColor(isolate);
+	foregroundColor = getForegroundColor(isolate);
 	updateCellWidth(isolate);
 	updateCellHeight(isolate);
 
@@ -823,7 +909,7 @@ void initGame(string gameFile, v8::Isolate* isolate, string jsPath, string puzzl
 		if (music != nullptr)
 		{
 			Mix_PlayMusic(music, -1);
-			Mix_VolumeMusic(MIX_MAX_VOLUME / 50);
+			Mix_VolumeMusic(getMusicVolume());
 			break;
 		}
 	}
@@ -893,6 +979,24 @@ void windowResize(int w, int h, v8::Isolate* isolate)
 	executeJavascript(context, "canvasResize()");
 }
 
+void toggleFullscreen(v8::Isolate* isolate)
+{
+	if (fullscreen)
+	{
+		SDL_SetWindowFullscreen(window, 0);
+		cout << width << ", " << height << endl;
+		windowResize(windowedWidth, windowedHeight, isolate);
+		fullscreen = false;
+	}
+	else
+	{
+		windowedWidth = width;
+		windowedHeight = height;
+		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		fullscreen = true;
+	}
+}
+
 // MAIN
 int main(int argc, char* argv[])
 {
@@ -912,7 +1016,13 @@ int main(int argc, char* argv[])
 	width = config.data["width"];
 	height = config.data["height"];
 	sfxOn = config.data["sfx"];
+	musicOn = config.data["music"];
+	music_volume_index = config.data["musicVolume"];
+	sfxr_volume_index = config.data["sfxVolume"];
+	chunk_volume_index = config.data["sfxVolume"];
 	fullscreen = config.data["fullscreen"];
+
+	sfxr_master_vol = sfxr_volume_scale[sfxr_volume_index];
 
 	windowedWidth = width;
 	windowedHeight = height;
@@ -1044,7 +1154,7 @@ int main(int argc, char* argv[])
 	glewInit();
 
 	// INIT GAME LIST
-	GUI_List gameList(20, 20, 28, 200, 24, font, { 255 , 255 , 255, 255 });
+	GUI_List gameList(20, 120, 28, 200, 20, font, { 255 , 255 , 255, 255 });
 	gameList.initFromDirectory("./data/games/");
 
 	allowGameList = (gameList.entries.size() > 1);
@@ -1078,8 +1188,20 @@ int main(int argc, char* argv[])
 
 	initGame(gameFile, isolate, jsPath, puzzlescriptPath);
 
+	SDL_Color fgc = { foregroundColor.r, foregroundColor.g, foregroundColor.b, 255 };
+	gameList.setColor(fgc);
+
 	showGameList = (gameFile != "") ? false : allowGameList;
 
+	GUI_Button* toggleFullscreenButton = new GUI_Button("./data/images/togglefullscreen.png", 0, 0, 32, 18, 4);
+	GUI_Button* quitButton = new GUI_Button("./data/images/btquit.png", 0, 0, 18, 18, 2);
+	GUI_Button* toggleGameListButton = new GUI_Button("./data/images/btgamelist.png", 0, 0, 18, 18, 2);
+
+	GLuint gaugeButton = loadImage("./data/images/btgauge.png");
+	GLuint gaugeButtonZero = loadImage("./data/images/btgaugezero.png");
+	DiscreetGauge musicGauge(music_volume_index, gaugeButton, gaugeButtonZero, 10.0f, 30.0f, 19.0, 18.0, 17, font, L"Music", foregroundColor);
+	DiscreetGauge soundGauge(chunk_volume_index, gaugeButton, gaugeButtonZero, 10.0f, 70.0f, 19.0, 18.0, 17, font, L"Sfx", foregroundColor);
+	
 	// INIT MAIN LOOP
 	bool running = true;
 	int currentTime = SDL_GetTicks();
@@ -1098,6 +1220,8 @@ int main(int argc, char* argv[])
 		currentTime = SDL_GetTicks();
 		deltaTime = currentTime - precTime;
 		precTime = currentTime;
+
+		showMouseHud = max(0, showMouseHud - deltaTime);
 
 		// MOUSE
 		SDL_GetMouseState(&mouse_x, &mouse_y);
@@ -1131,11 +1255,7 @@ int main(int argc, char* argv[])
 							executeJavascript(context, "onKeyDown({keyCode: 85})");
 							break;
 						case SDL_CONTROLLER_BUTTON_BACK:
-							if (getIsTitleScreen(isolate))
-							{
-								running = false;
-							}
-							else
+							if (!getIsTitleScreen(isolate))
 							{
 								executeJavascript(context, "onKeyDown({keyCode: 27})");
 							}
@@ -1187,7 +1307,15 @@ int main(int argc, char* argv[])
 							cout << (int)(event.cbutton.button) << endl;
 					}
 					break;
+				case SDL_MOUSEMOTION:
+					showMouseHud = MouseHudDelay;
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+					showMouseHud = MouseHudDelay;
+					break;
 				case SDL_MOUSEBUTTONUP:
+					showMouseHud = MouseHudDelay;
+
 					if (showGameList && gameList.selectedEntry)
 					{
 						if (gameFile != gameList.selectedEntry->valeur)
@@ -1199,11 +1327,52 @@ int main(int argc, char* argv[])
 
 							gameFile = gameList.selectedEntry->valeur;
 							initGame(gameFile, isolate, jsPath, puzzlescriptPath);
+
+							musicGauge.updateTextColor(foregroundColor);
+							soundGauge.updateTextColor(foregroundColor);
+							SDL_Color fgc = { foregroundColor.r, foregroundColor.g, foregroundColor.b, 255 };
+							gameList.setColor(fgc);
 							cout << gameList.selectedEntry->valeur << endl;
 						}
 
 						showGameList = false;
 					}
+
+					if (toggleFullscreenButton->isIn(mouse_x, mouse_y))
+					{
+						toggleFullscreen(isolate);
+					}
+
+					if (quitButton->isIn(mouse_x, mouse_y))
+					{
+						running = false;
+					}
+
+					if (allowGameList && toggleGameListButton->isIn(mouse_x, mouse_y))
+					{
+						showGameList = !showGameList;
+					}
+
+					{
+						int newMusicVolume = musicGauge.onClick(mouse_x, mouse_y);
+						if (newMusicVolume >= 0 && newMusicVolume != music_volume_index)
+						{
+							music_volume_index = newMusicVolume;
+							Mix_VolumeMusic(getMusicVolume());
+						}
+					}
+
+					{
+						int newSoundVolume = soundGauge.onClick(mouse_x, mouse_y);
+						if (newSoundVolume >= 0 && newSoundVolume != chunk_volume_index)
+						{
+							chunk_volume_index = newSoundVolume;
+
+							sfxr_volume_index = newSoundVolume;
+							sfxr_master_vol = sfxr_volume_scale[sfxr_volume_index];
+						}
+					}
+
 					break;
 				case SDL_WINDOWEVENT:
 					if (event.window.event == SDL_WINDOWEVENT_RESIZED)
@@ -1219,21 +1388,36 @@ int main(int argc, char* argv[])
 					{
 						if (keyMod & KMOD_ALT)
 						{
-							if (fullscreen)
-							{
-								SDL_SetWindowFullscreen(window, 0);
-								cout << width << ", " << height << endl;
-								windowResize(windowedWidth, windowedHeight, isolate);
-								fullscreen = false;
-							}
-							else
-							{
-								windowedWidth = width;
-								windowedHeight = height;
-								SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-								fullscreen = true;
-							}
+							toggleFullscreen(isolate);
 						}
+					}
+
+					if (event.key.keysym.sym == SDLK_o)
+					{
+						sfxr_volume_index = min(16, sfxr_volume_index + 1);
+						sfxr_master_vol = sfxr_volume_scale[sfxr_volume_index];
+
+						chunk_volume_index = min(16, chunk_volume_index + 1);
+					}
+
+					if (event.key.keysym.sym == SDLK_l)
+					{
+						sfxr_volume_index = max(0, sfxr_volume_index - 1);
+						sfxr_master_vol = sfxr_volume_scale[sfxr_volume_index];
+
+						chunk_volume_index = max(0, chunk_volume_index - 1);
+					}
+
+					if (event.key.keysym.sym == SDLK_p)
+					{
+						music_volume_index = min(16, music_volume_index + 1);
+						Mix_VolumeMusic(getMusicVolume());
+					}
+
+					if (event.key.keysym.sym == SDLK_m)
+					{
+						music_volume_index = max(0, music_volume_index - 1);
+						Mix_VolumeMusic(getMusicVolume());
 					}
 
 					if ((event.key.keysym.sym == SDLK_SPACE || event.key.keysym.sym == SDLK_RETURN
@@ -1270,15 +1454,10 @@ int main(int argc, char* argv[])
 					}
 					if (event.key.keysym.sym == SDLK_ESCAPE)
 					{
-						if (getIsTitleScreen(isolate))
-						{
-							running = false;
-						}
-						else
+						if (!getIsTitleScreen(isolate))
 						{
 							executeJavascript(context, "onKeyDown({keyCode: 27})");
 						}
-
 					}
 					if (event.key.keysym.sym == SDLK_e)
 					{
@@ -1441,6 +1620,34 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		// Display GUI
+		if (showMouseHud > 0)
+		{
+			toggleFullscreenButton->setPos(width - 32 - 22, 0);
+			if (toggleFullscreenButton->isIn(mouse_x, mouse_y))
+			{
+				toggleFullscreenButton->setEtat(fullscreen ? 3 : 2);
+			}
+			else
+			{
+				toggleFullscreenButton->setEtat(fullscreen ? 1 : 0);
+			}
+			toggleFullscreenButton->draw();
+
+			quitButton->setPos(width - 18, 0);
+			quitButton->setEtat(quitButton->isIn(mouse_x, mouse_y) ? 1 : 0);
+			quitButton->draw();
+
+			if (allowGameList)
+			{
+				toggleGameListButton->setEtat(toggleGameListButton->isIn(mouse_x, mouse_y) ? 1 : 0);
+				toggleGameListButton->draw();
+			}
+
+			musicGauge.draw();
+			soundGauge.draw();
+		}
+
 		// Display all sprites models
 		//for (int i = 0; i < sprites.size(); i++)
 		// {
@@ -1448,7 +1655,7 @@ int main(int argc, char* argv[])
 		//}
 
 		// display framerate
-		if (showFPS) updateAndDrawFPS(currentTime);
+		if (showFPS) updateAndDrawFPS(currentTime, isolate);
 
 		SDL_GL_SwapWindow(window);
 	}

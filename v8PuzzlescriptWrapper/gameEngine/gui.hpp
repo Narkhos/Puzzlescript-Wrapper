@@ -25,10 +25,25 @@
 #include <vector>
 #include <map>
 #include <SDL.h>
+#include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <GL/glew.h>
 
 using namespace std;
+
+#ifndef GUI_WIDGET_UNDEFINED
+#define GUI_WIDGET_UNDEFINED 0
+#endif
+
+#ifndef GUI_WIDGET_BUTTON
+#define GUI_WIDGET_BUTTON 1
+#endif
+
+#ifndef GUI_WIDGET_TEXTINPUT
+#define GUI_WIDGET_TEXTINPUT 2
+#endif
+
+GLuint SurfaceToTexture(SDL_Surface *surface);
 
 Uint16* wstringToUint16(wstring chaine);
 std::wstring utf8_to_utf16(const std::string& utf8);
@@ -36,7 +51,135 @@ std::string utf16_to_utf8(const std::wstring& utf16);
 
 GLuint texteToTexture(const TTF_Font *font, SDL_Color color, const std::wstring& texte, int &w, int &h);
 GLuint texteToTexture(const TTF_Font *font, SDL_Color color, SDL_Color bgColor, const std::wstring& texte, int &w, int &h, Uint32 wrapLength);
+GLuint loadImage(string file);
 void drawImage(GLuint tex, float x, float y, float w, float h, float alpha, GLfloat luminosite = 1.0, GLfloat texCoord[8] = NULL);
+
+/**
+	Zone cliquable à l'écran
+*/
+class GUI_Widget
+{
+	public:
+
+	float x; ///< Coordonnée x de la zone cliquable
+	float y; ///< Coordonnée y de la zone cliquable
+	float w; ///< Largeur de la zone cliquable
+	float h; ///< Hauteur de la zone cliquable
+
+	bool visible;
+	bool actif;
+
+	wstring txtInfoBulle; ///< Texte à afficher dans l'info bulle
+
+	int widgetType; ///< Type de widget (défini selon chaque classe dérivée)
+
+	string code;	///< Code de référence de l'objet. A renseigner si on à besoin que l'objet puisse être identifié dans une liste par exemple
+	/**
+		@param _x Coordonnée x de la zone cliquable
+		@param _y Coordonnée y de la zone cliquable
+		@param _w Largeur de la zone cliquable
+		@param _h Hauteur de la zone cliquable
+		@param _wodgetType Type de widget
+	*/
+	GUI_Widget(float _x, float _y, float _w, float _h, int _widgetType);
+
+	~GUI_Widget();
+
+	/**
+		Fonction à exécuter lorsque la zone est activé par un clique
+	*/
+	virtual void action() = 0;
+
+	/**
+		Lance l'action liée à la zone cliquable si les coordonnées sont dans la zone
+		@param mouseX position x à l'écran
+		@param mouseY position y à l'écran
+	*/
+	bool clique(float mouseX, float mouseY);
+
+	virtual void update();
+
+	// bool rollOver(float mouseX, float mouseY, int scrWidth, int scrHeight);
+
+	bool bCollisionRect(float x2, float y2, float w2, float h2);
+	/**
+		Change la position de la zone cliquable
+	*/
+	void setPos(float _x, float _y);
+
+	/**
+		Retourne la position x du bord droit de la zone cliquable
+		@return position x du bord droit de la zone cliquable
+	*/
+	float get_x2();
+
+	/**
+		Retourne la position y du bord inférieur de la zone cliquable
+		@return position y du bord inférieur de la zone cliquable
+	*/
+	float get_y2();
+
+	/**
+		Vérifie que la position est dans la zone cliquable
+		@param mouseX position X à vérifier
+		@param mouseY position Y à vérifier
+		@return renvoie true si mouseX,mouseY est dans la zone cliquable
+	*/
+	bool isIn(float mouseX, float mouseY);
+
+	virtual void draw() = 0;
+};
+
+/**
+	Décrit un bouton à plusieurs états (1 à 5 états)
+*/
+class GUI_Button : public GUI_Widget
+{
+	public:
+
+	int tex; ///< id de la texture dans le contexte opengl
+	int etat; ///< Etat courant du bouton ( 0 : actif; 1 : enfoncé; 2 : grisé; 3 : en cours; 4 : survol
+	int nbEtats; ///< Nombre d'états du bouton
+	GLfloat texCoord[5][8]; ///< Coordonnées de texture pour chaque état
+
+	/**
+		@param file chemin de l'image du bouton
+		@param _x position x du bouton à l'écran
+		@param _y position y du bouton à l'écran
+		@param _w largeur du bouton
+		@param _h hauteur du bouton
+		@param _nbEtats (entre 1 et 5)
+		@param _txtInfoBulle texte de l'info bulle
+	*/
+	GUI_Button(string file, float _x, float _y, float _w, float _h, int _nbEtats);
+	GUI_Button(int _tex, float _x, float _y, float _w, float _h, int _nbEtats);
+
+	~GUI_Button();
+
+	void loadImage(string file);
+
+	/**
+		Initialisation des coordonnées de texture
+	*/
+	void initTexCoord();
+
+	/**
+		Dessine le bouton à l'écran
+	*/
+	virtual void draw();
+
+	/**
+		Change l'état du bouton
+		@param _etat nouvel état du bouton
+		@return true si l'état demandé est valide et a pu être changé
+	*/
+	bool setEtat(int _etat);
+
+	/**
+		Traitement à effectuer au clique sur le bouton
+	*/
+	virtual void action();
+};
 
 /**
 	Texte affichable sous forme d'une texture en Opengl et modifiable dynamiquement.
@@ -71,6 +214,12 @@ class GUI_TexteDynamique
 		@param _texte Nouveau texte à afficher
 	*/
 	void setTexte(wstring _texte);
+
+	/**
+		Change la couleur du texte
+		@param _couleur Nouvelle couleur
+	*/
+	void setColor(SDL_Color &_couleur);
 
 	/**
 		@param _x Position x ou écrire le texte
@@ -152,6 +301,12 @@ class GUI_List
 	bool initFromDirectory(string directoryPath, bool sortAlpha=true, bool navigationEntries=false);
 
 	bool entryExist(string value);
+
+	/**
+		Change la couleur du texte de toutes les entries
+		@param _couleur Nouvelle couleur
+	*/
+	void setColor(SDL_Color &_couleur);
 };
 
 #endif
