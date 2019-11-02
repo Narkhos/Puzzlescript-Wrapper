@@ -2,5 +2,8 @@
   "width": 1024,
   "height": 768,
   "fullscreen": false,
-  "sfx": true
+  "sfx": true,
+  "sfxVolume": 8,
+  "music": true,
+  "musicVolume": 8
 }

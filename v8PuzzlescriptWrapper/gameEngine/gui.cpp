@@ -23,6 +23,53 @@
 
 namespace fs = std::filesystem;
 
+GLuint SurfaceToTexture(SDL_Surface *surface)
+{
+	//return createRedTexture();
+	GLuint tid;
+	GLenum texture_format;
+	GLint ncolors;
+	SDL_Surface* s = surface;
+
+	/* Convert SDL_Surface to OpenGL Texture */
+	ncolors = s->format->BytesPerPixel;
+	if (ncolors == 4) {
+		//alpha channel
+		if (s->format->Rmask == 0x000000ff)
+		{
+			texture_format = GL_RGBA;
+		}
+		else
+		{
+			texture_format = GL_BGRA;
+		}
+	}
+	else {
+		if (ncolors == 3) {
+			//no alpha channel
+			if (s->format->Rmask == 0x0000ff)
+				texture_format = GL_RGB;
+			else
+				texture_format = GL_BGR;
+		}
+		else {
+			return 0;
+		}
+	}
+
+	glGenTextures(1, &tid);
+	glBindTexture(GL_TEXTURE_2D, tid);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, ncolors, s->w, s->h, 0,
+		texture_format, GL_UNSIGNED_BYTE, s->pixels);
+
+	return tid;
+}
+
 Uint16* wstringToUint16(wstring chaine)
 {
 	Uint16* texte;
@@ -169,6 +216,25 @@ GLuint texteToTexture(const TTF_Font *font, SDL_Color color, SDL_Color bgColor, 
 	s = NULL;
 
 	return tid;
+}
+
+GLuint loadImage(string file)
+{
+	GLuint tex;
+	SDL_Surface *surface = IMG_Load(file.c_str());
+
+	if (!surface)
+	{
+		cout << "IMG_Load : " << IMG_GetError() << endl;
+		return -1;
+	}
+	else
+	{
+		tex = SurfaceToTexture(surface);
+		SDL_FreeSurface(surface);
+		surface = NULL;
+		return tex;
+	}
 }
 
 void drawImage(GLuint tex, float x, float y, float w, float h, float alpha, GLfloat luminosite, GLfloat texCoord[8])
@@ -352,6 +418,197 @@ std::string utf16_to_utf8(const std::wstring& src)
 	return dest;
 }
 
+// class GUI_Widget
+
+GUI_Widget::GUI_Widget(float _x, float _y, float _w, float _h, int _widgetType)
+	:x(_x), y(_y), w(_w), h(_h), code(""), widgetType(_widgetType)
+{
+
+	visible = true;
+	actif = true;
+}
+
+GUI_Widget::~GUI_Widget() {}
+
+
+
+bool GUI_Widget::clique(float mouseX, float mouseY)
+{
+	if (visible && actif && isIn(mouseX, mouseY))
+	{
+		//this->action();
+		return true;
+	}
+
+	return false;
+}
+
+bool GUI_Widget::bCollisionRect(float x2, float y2, float w2, float h2)
+{
+	if (x < x2 + w2 &&
+		x + w > x2 &&
+		y < y2 + h2 &&
+		h + y > y2)
+	{
+		return true;
+	}
+	return false;
+}
+
+void GUI_Widget::update()
+{
+	// Par défaut, la fonction ne fait rien
+}
+
+void GUI_Widget::setPos(float _x, float _y)
+{
+	x = _x;
+	y = _y;
+}
+
+float GUI_Widget::get_x2()
+{
+	return x + w;
+}
+
+
+float GUI_Widget::get_y2()
+{
+	return y + h;
+}
+
+bool GUI_Widget::isIn(float mouseX, float mouseY)
+{
+	if (mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+
+// class Button : public GUI_Widget
+GUI_Button::GUI_Button(int _tex, float _x, float _y, float _w, float _h, int _nbEtats)
+	:GUI_Widget(_x, _y, _w, _h, GUI_WIDGET_BUTTON), etat(0), nbEtats(_nbEtats)
+{
+	this->tex = _tex;
+	initTexCoord();
+}
+
+GUI_Button::GUI_Button(string file, float _x, float _y, float _w, float _h, int _nbEtats)
+	:GUI_Widget(_x, _y, _w, _h, GUI_WIDGET_BUTTON), etat(0), nbEtats(_nbEtats)
+{
+	this->tex = -1;
+	loadImage(file);
+}
+
+void GUI_Button::loadImage(string file)
+{
+	SDL_Surface *surface = IMG_Load(file.c_str());
+
+	if (!surface)
+	{
+		cout << "IMG_Load : " << IMG_GetError() << endl;
+	}
+	else
+	{
+		if (tex > -1)
+		{
+			glDeleteTextures(1, (GLuint*)&(this->tex));
+		}
+
+		tex = SurfaceToTexture(surface);
+		SDL_FreeSurface(surface); surface = NULL;
+
+		initTexCoord();
+	}
+}
+
+GUI_Button::~GUI_Button()
+{
+
+}
+
+void GUI_Button::initTexCoord()
+{
+	// Parcours des 5 états
+	for (int e = 0; e < nbEtats; ++e)
+	{
+		float offset = (float)e / (float)nbEtats;
+
+		texCoord[e][0] = offset;
+		texCoord[e][1] = 0.0;
+
+		texCoord[e][2] = offset + 1.0 / (float)nbEtats;
+		texCoord[e][3] = 0.0;
+
+		texCoord[e][4] = offset + 1.0 / (float)nbEtats;
+		texCoord[e][5] = 1.0;
+
+		texCoord[e][6] = offset;
+		texCoord[e][7] = 1.0;
+	}
+}
+
+void GUI_Button::draw()
+{
+	if (!visible) return;
+
+	GLfloat vtx1[] =
+	{
+		x, y, 0,
+		x + w, y, 0,
+		x + w, y + h, 0,
+		x, y + h, 0
+	};
+
+	GLfloat col1[] =
+	{
+		1.0,1.0,1.0, 1.0f,
+		1.0,1.0,1.0, 1.0f,
+		1.0,1.0,1.0, 1.0f,
+		1.0,1.0,1.0, 1.0f
+	};
+
+	glBindTexture(GL_TEXTURE_2D, this->tex);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+	glVertexPointer(3, GL_FLOAT, 0, vtx1);
+	glTexCoordPointer(2, GL_FLOAT, 0, this->texCoord[etat]);
+	glColorPointer(4, GL_FLOAT, 0, col1);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+}
+
+bool GUI_Button::setEtat(int _etat)
+{
+	if (_etat >= 0 && _etat < this->nbEtats)
+	{
+		etat = _etat;
+		return true;
+	}
+
+	return false;
+}
+
+/**
+	Traitement à effectuer au clique sur le bouton
+*/
+void GUI_Button::action()
+{
+	setEtat((this->etat + 1) % nbEtats);
+}
+
 // class GUI_TexteDynamique
 
 GUI_TexteDynamique::GUI_TexteDynamique(wstring _texte, TTF_Font *_font, SDL_Color _couleur, SDL_Color* _bgColor,Uint32 _wrapLength)
@@ -377,9 +634,16 @@ void GUI_TexteDynamique::setTexte(wstring _texte)
     }
 }
 
+void GUI_TexteDynamique::setColor(SDL_Color &_couleur)
+{
+	this->couleur = _couleur;
+	// Suppression de la précédente texture s'il y en a une
+	delTexture();
+}
+
 void GUI_TexteDynamique::draw(float _x, float _y, float _ratioX, float _ratioY, float _alpha)
 {
-	// génèration de la texture si le texte a changé
+	// géneration de la texture si le texte a changé
 	updateTexture();
 
 	// Affichage du texte aux coordonnées demandées
@@ -640,4 +904,12 @@ bool GUI_List::entryExist(string value)
 	}
 
 	return false;
+}
+
+void GUI_List::setColor(SDL_Color &_couleur)
+{
+	for (int i = 0; i < entries.size(); ++i)
+	{
+		entries[i]->setColor(_couleur);
+	}
 }

@@ -8,6 +8,7 @@
 #include <time.h>
 #include <math.h>
 #include <SDL.h>
+#include <SDL_mixer.h>
 
 #ifndef SQUARE
 #define SQUARE 0
@@ -38,6 +39,8 @@
 #define PI 3.14159265f
 
 using namespace std;
+
+extern float sfxr_master_vol;
 
 struct SoundParams {
     float p_env_attack;
@@ -174,6 +177,9 @@ class SfxrSound
         int wave_type
 	);
     ~SfxrSound();
+
+	Mix_Chunk* generateSound();
+
 	void ResetParams();
 
 	void playSample();

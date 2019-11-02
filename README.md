@@ -12,6 +12,16 @@ I didn't rewrite puzzlescript engine in C++. The javascript engine is embeded so
 
 PuzzlescriptWrapper is published under the terms of the LGPL v3 license (See both [GPL](https://www.gnu.org/licenses/gpl.txt) and [LGPL](https://www.gnu.org/licenses/lgpl.txt) Licenses for more details)
 
+## v2.0.2
+
+- Adding music support: if you used the youtube meta in your puzzlescript game, add an audio file in ./data/music/ with the youtube id as the filename.
+- sound from file: if you want to replace the puzzlescript generated sounds by some custom sounds, add the audio files in ./data/sfx/ with the puzzlescript sound code as  the filename.
+- HUD widgets :
+	- toggle fullscreen
+	- close application
+	- set music and sound level
+	- open/close game list
+
 ## v2.0.1
 
 - Toggle fullscreen with Alt+Enter
