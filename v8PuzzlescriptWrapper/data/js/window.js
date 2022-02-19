@@ -18,6 +18,14 @@ localStorage.removeItem = function (item) {
     delete this[item];
 }
 
+localStorage.setItem = function(key,value) {
+	this[key]=value;
+}
+
+localStorage.getItem = function(key) {
+	return this[key] ? this[key] : null;
+}
+
 // Saving current progression. Called on quitting native c++ program
 localStorage.serialize = function(){
 	var data = '';

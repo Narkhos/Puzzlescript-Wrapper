@@ -18,7 +18,7 @@
  *************************************************************************************/
 
 #ifndef __PS_WRAPPER_VERSION__
-#define __PS_WRAPPER_VERSION__ "v2.0.2"
+#define __PS_WRAPPER_VERSION__ "v2.0.3"
 #endif
 
 // #define __USE_MINIFIED__
@@ -32,8 +32,8 @@
 #include <GL/glew.h>
 #include <v8.h>
 #include <libplatform/libplatform.h>
-#include "sfxr.hpp"
-#include "gui.hpp"
+#include "gameEngine/sfxr.hpp"
+#include "gameEngine/gui.hpp"
 #include "gameEngine/json.hpp"
 
 #ifdef _MSC_VER
@@ -860,6 +860,7 @@ void initGame(string gameFile, v8::Isolate* isolate, string jsPath, string puzzl
 	loadGameState("./data/localStorage/" + gameFile);
 
 	executeJavascriptFile(context, jsPath + "document.js");
+	executeJavascriptFile(context, puzzlescriptPath + "storagewrapper.js");
 	executeJavascriptFile(context, puzzlescriptPath + "globalVariables.js");
 	executeJavascriptFile(context, puzzlescriptPath + "debug_off.js");
 	executeJavascriptFile(context, puzzlescriptPath + "font.js");

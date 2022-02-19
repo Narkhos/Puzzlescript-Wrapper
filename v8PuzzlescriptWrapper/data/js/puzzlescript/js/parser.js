@@ -1,7 +1,7 @@
 /*
 credits
 
-brunt of the work by stephen lavelle (www.increpare.com)
+brunt of the work by increpare (www.increpare.com)
 
 all open source mit license blah blah
 
@@ -21,13 +21,13 @@ for post-launch credits, check out activty on github.com/increpare/PuzzleScript
 */
 
 var compiling = false;
-var errorStrings = [];
-var errorCount=0;
+var errorStrings = [];//also stores warning strings
+var errorCount=0;//only counts errors
 
 function logErrorCacheable(str, lineNumber,urgent) {
     if (compiling||urgent) {
         if (lineNumber === undefined) {
-            return logErrorNoLine(str);
+            return logErrorNoLine(str,urgent);
         }
         var errorString = '<a onclick="jumpToLine(' + lineNumber.toString() + ');"  href="javascript:void(0);"><span class="errorTextLineNumber"> line ' + lineNumber.toString() + '</span></a> : ' + '<span class="errorText">' + str + '</span>';
          if (errorStrings.indexOf(errorString) >= 0 && !urgent) {
@@ -59,7 +59,7 @@ function logError(str, lineNumber,urgent) {
 function logWarning(str, lineNumber,urgent) {
     if (compiling||urgent) {
         if (lineNumber === undefined) {
-            return logErrorNoLine(str);
+            return logWarningNoLine(str,urgent);
         }
         var errorString = '<a onclick="jumpToLine(' + lineNumber.toString() + ');"  href="javascript:void(0);"><span class="errorTextLineNumber"> line ' + lineNumber.toString() + '</span></a> : ' + '<span class="warningText">' + str + '</span>';
          if (errorStrings.indexOf(errorString) >= 0 && !urgent) {
@@ -70,6 +70,21 @@ function logWarning(str, lineNumber,urgent) {
         }
     }
 }
+
+function logWarningNoLine(str,urgent) {
+    if (compiling||urgent) {
+        var errorString = '<span class="warningText">' + str + '</span>';
+         if (errorStrings.indexOf(errorString) >= 0 && !urgent) {
+            //do nothing, duplicate error
+         } else {
+            consolePrint(errorString,true);
+            errorStrings.push(errorString);
+        }
+        errorCount++;
+    }
+}
+
+
 function logErrorNoLine(str,urgent) {
     if (compiling||urgent) {
         var errorString = '<span class="errorText">' + str + '</span>';
@@ -183,20 +198,20 @@ var codeMirrorFn = function() {
     var logicWords = ['all', 'no', 'on', 'some'];
     var sectionNames = ['objects', 'legend', 'sounds', 'collisionlayers', 'rules', 'winconditions', 'levels'];
 	var commandwords = ["sfx0","sfx1","sfx2","sfx3","sfx4","sfx5","sfx6","sfx7","sfx8","sfx9","sfx10","cancel","checkpoint","restart","win","message","again"];
-    var reg_commands = /\s*(sfx0|sfx1|sfx2|sfx3|Sfx4|sfx5|sfx6|sfx7|sfx8|sfx9|sfx10|cancel|checkpoint|restart|win|message|again)\s*/;
-    var reg_name = /[\w]+\s*/;///\w*[a-uw-zA-UW-Z0-9_]/;
+    var reg_commands = /[\p{Z}\s]*(sfx0|sfx1|sfx2|sfx3|Sfx4|sfx5|sfx6|sfx7|sfx8|sfx9|sfx10|cancel|checkpoint|restart|win|message|again)[\p{Z}\s]*/u;
+    var reg_name = /[\p{L}\p{N}_]+[\p{Z}\s]*/u;///\w*[a-uw-zA-UW-Z0-9_]/;
     var reg_number = /[\d]+/;
     var reg_soundseed = /\d+\b/;
-    var reg_spriterow = /[\.0-9]{5}\s*/;
-    var reg_sectionNames = /(objects|collisionlayers|legend|sounds|rules|winconditions|levels)(?![\w])\s*/;
+    var reg_spriterow = /[\.0-9]{5}[\p{Z}\s]*/u;
+    var reg_sectionNames = /(objects|collisionlayers|legend|sounds|rules|winconditions|levels)(?![\p{L}\p{N}_])[\p{Z}\s]*/u;
     var reg_equalsrow = /[\=]+/;
     var reg_notcommentstart = /[^\(]+/;
     var reg_csv_separators = /[ \,]*/;
-    var reg_soundverbs = /(move|action|create|destroy|cantmove|undo|restart|titlescreen|startgame|cancel|endgame|startlevel|endlevel|showmessage|closemessage|sfx0|sfx1|sfx2|sfx3|sfx4|sfx5|sfx6|sfx7|sfx8|sfx9|sfx10)\s+/;
+    var reg_soundverbs = /(move|action|create|destroy|cantmove|undo|restart|titlescreen|startgame|cancel|endgame|startlevel|endlevel|showmessage|closemessage|sfx0|sfx1|sfx2|sfx3|sfx4|sfx5|sfx6|sfx7|sfx8|sfx9|sfx10)\b[\p{Z}\s]*/u;
     var reg_directions = /^(action|up|down|left|right|\^|v|\<|\>|moving|stationary|parallel|perpendicular|horizontal|orthogonal|vertical|no|randomdir|random)$/;
     var reg_loopmarker = /^(startloop|endloop)$/;
     var reg_ruledirectionindicators = /^(up|down|left|right|horizontal|vertical|orthogonal|late|rigid)$/;
-    var reg_sounddirectionindicators = /\s*(up|down|left|right|horizontal|vertical|orthogonal)\s*/;
+    var reg_sounddirectionindicators = /[\p{Z}\s]*(up|down|left|right|horizontal|vertical|orthogonal)(?![\p{L}\p{N}_])[\p{Z}\s]*/u;
     var reg_winconditionquantifiers = /^(all|any|no|some)$/;
     var reg_keywords = /(checkpoint|objects|collisionlayers|legend|sounds|rules|winconditions|\.\.\.|levels|up|down|left|right|^|\||\[|\]|v|\>|\<|no|horizontal|orthogonal|vertical|any|all|no|some|moving|stationary|parallel|perpendicular|action)/;
     var keyword_array = ['checkpoint','objects', 'collisionlayers', 'legend', 'sounds', 'rules', '...','winconditions', 'levels','|','[',']','up', 'down', 'left', 'right', 'late','rigid', '^','v','\>','\<','no','randomdir','random', 'horizontal', 'vertical','any', 'all', 'no', 'some', 'moving','stationary','parallel','perpendicular','action','message'];
@@ -394,7 +409,7 @@ var codeMirrorFn = function() {
                 }
 
                 //MATCH SECTION NAME
-                if (stream.match(reg_sectionNames, true)) {
+                if (sol && stream.match(reg_sectionNames, true)) {
                     state.section = stream.string.slice(0, stream.pos).trim();
                     if (state.visitedSections.indexOf(state.section) >= 0) {
                         logError('cannot duplicate sections (you tried to duplicate \"' + state.section.toUpperCase() + '").', state.lineNumber);
@@ -410,7 +425,7 @@ var codeMirrorFn = function() {
                         if (sectionIndex===-1) {
                             logError('no such section as "' + state.section.toUpperCase() + '".', state.lineNumber);
                         } else {
-                            logError('section "' + state.section.toUpperCase() + '" is out of order, must follow  "' + sectionNames[sectionIndex - 1].toUpperCase() + '".', state.lineNumber);                            
+                            logError('section "' + state.section.toUpperCase() + '" is out of order, must follow  "' + sectionNames[sectionIndex - 1].toUpperCase() + '" (or it could be that the section "'+sectionNames[sectionIndex - 1].toUpperCase()+`"is just missing totally.  You have to include all section headings, even if the section itself is empty).`, state.lineNumber);                            
                         }
                     }
 
@@ -491,7 +506,7 @@ var codeMirrorFn = function() {
                     {
 						var tryParseName = function() {
                             //LOOK FOR NAME
-                            var match_name = sol ? stream.match(reg_name, true) : stream.match(/[^\s\()]+\s*/,true);
+                            var match_name = sol ? stream.match(reg_name, true) : stream.match(/[^\p{Z}\s\()]+[\p{Z}\s]*/u,true);
                             if (match_name == null) {
                                 stream.match(reg_notcommentstart, true);
                                 if (stream.pos>0){                                
@@ -634,7 +649,7 @@ var codeMirrorFn = function() {
                     {
                         if (sol) {
                             var ok = true;
-                            var splits = reg_notcommentstart.exec(stream.string)[0].split(/\s/).filter(function(v) {return v !== ''});                          
+                            var splits = reg_notcommentstart.exec(stream.string)[0].split(/[\p{Z}\s]/u).filter(function(v) {return v !== ''});                          
                             splits.push(state.lineNumber);
                             state.sounds.push(splits);
                         }
@@ -652,15 +667,16 @@ var codeMirrorFn = function() {
                             state.tokenIndex++;
                             return 'SOUND';
                         } 
-                       	candname = stream.match(/[^\[\|\]\s]*/, true);
+                       	candname = stream.match(/[^\[\|\]\p{Z}\s]*/u, true);
                        	if (candname!== null ) {
                        		var m = candname[0].trim();
                        		if (state.names.indexOf(m)>=0) {
                        			return 'NAME';
                        		}
-                       	}
-
-                        candname = stream.match(reg_notcommentstart, true);
+                       	} else {
+                            //can we ever get here?
+                            candname = stream.match(reg_notcommentstart, true);
+                        }
                         logError('unexpected sound token "'+candname+'".' , state.lineNumber);
                         stream.match(reg_notcommentstart, true);
                         return 'ERROR';
@@ -712,7 +728,15 @@ var codeMirrorFn = function() {
                             	for (var i=0;i<state.legend_properties.length;i++) {
                             		var a = state.legend_properties[i];
                             		if (a[0]===n) {  
-                                        var result = [].concat.apply([],a.slice(1).map(substitutor));
+                                        var result = [];
+                                        for (var j=1;j<a.length;j++){
+                                            if (a[j]===n){
+                                                //error here superfluous, also detected elsewhere (cf 'You can't define object' / #789)
+                                                //logError('Error, recursive definition found for '+n+'.', state.lineNumber);                                
+                                            } else {
+                                                result = result.concat(substitutor(a[j]));
+                                            }
+                                        }
                             			return result;
                             		}
                             	}
@@ -750,10 +774,10 @@ var codeMirrorFn = function() {
                             if (foundOthers.length>0){
                                 var warningStr = 'Object "'+candname.toUpperCase()+'" included in multiple collision layers ( layers ';
                                 for (var i=0;i<foundOthers.length;i++){
-                                    warningStr+=foundOthers[i]+", ";
+                                    warningStr+="#"+(foundOthers[i]+1)+", ";
                                 }
-                                warningStr+=state.collisionLayers.length-1;
-                                logWarning(warningStr +'). You should fix this!',state.lineNumber);                                        
+                                warningStr+="#"+state.collisionLayers.length;
+                                logWarning(warningStr +' ). You should fix this!',state.lineNumber);                                        
                             }
 
                             state.collisionLayers[state.collisionLayers.length - 1] = state.collisionLayers[state.collisionLayers.length - 1].concat(ar);
@@ -774,7 +798,7 @@ var codeMirrorFn = function() {
                             var longer = stream.string.replace('=', ' = ');
                             longer = reg_notcommentstart.exec(longer)[0];
 
-                            var splits = longer.split(/\s/).filter(function(v) {
+                            var splits = longer.split(/[\p{Z}\s]/u).filter(function(v) {
                                 return v !== '';
                             });
                             var ok = true;
@@ -786,7 +810,17 @@ var codeMirrorFn = function() {
 	                            }
                                 if (splits.indexOf(candname, 2)>=2) {
                                     logError("You can't define object " + candname.toUpperCase() + " in terms of itself!", state.lineNumber);
-                                    ok = false;
+                                    var idx = splits.indexOf(candname, 2);
+                                    while (idx >=2){
+                                        if (idx>=4){
+                                            splits.splice(idx-1, 2);
+                                        } else {
+                                            splits.splice(idx, 2);
+                                        }
+                                        idx = splits.indexOf(candname, 2);
+                                    }
+
+                                    // ok = false;
                                 }
                                 checkNameNew(state,candname);
                         	}
@@ -880,8 +914,17 @@ var codeMirrorFn = function() {
 	                                	for (var i=0;i<state.legend_properties.length;i++) {
 	                                		var a = state.legend_properties[i];
 	                                		if (a[0]===n) {  
-	                                			return [].concat.apply([],a.slice(1).map(substitutor));
-	                                		}
+                                                var result = [];
+                                                for (var j=1;j<a.length;j++){
+                                                    if (a[j]===n){
+                                                        //error here superfluous, also detected elsewhere (cf 'You can't define object' / #789)
+                                                        //logError('Error, recursive definition found for '+n+'.', state.lineNumber);                                
+                                                    } else {
+                                                        result = result.concat(substitutor(a[j]));
+                                                    }
+                                                }
+                                                return result;
+                                            }
 	                                	}
 	                                	return [n];
 	                                };
@@ -922,7 +965,7 @@ var codeMirrorFn = function() {
                             return 'NAME';
                         } else if (state.tokenIndex === 1) {
                             stream.next();
-                            stream.match(/\s*/, true);
+                            stream.match(/[\p{Z}\s]*/u, true);
                             state.tokenIndex++;
                             return 'ASSSIGNMENT';
                         } else {
@@ -991,7 +1034,7 @@ var codeMirrorFn = function() {
                         	stream.skipToEnd();
                         	return 'MESSAGE';
                         }
-                        if (stream.match(/\s*\-\>\s*/, true)) {
+                        if (stream.match(/[\p{Z}\s]*->[\p{Z}\s]*/u, true)) {
                             return 'ARROW';
                         }
                         if (ch === '[' || ch === '|' || ch === ']' || ch==='+') {
@@ -999,18 +1042,18 @@ var codeMirrorFn = function() {
                             	state.tokenIndex = 1;
                             }
                             stream.next();
-                            stream.match(/\s*/, true);
+                            stream.match(/[\p{Z}\s]*/u, true);
                             return 'BRACKET';
                         } else {
-                            var m = stream.match(/[^\[\|\]\s]*/, true)[0].trim();
+                            var m = stream.match(/[^\[\|\]\p{Z}\s]*/u, true)[0].trim();
 
                             if (state.tokenIndex===0&&reg_loopmarker.exec(m)) {
                             	return 'BRACKET';
                             } else if (state.tokenIndex === 0 && reg_ruledirectionindicators.exec(m)) {
-                                stream.match(/\s*/, true);
+                                stream.match(/[\p{Z}\s]*/u, true);
                                 return 'DIRECTION';
                             } else if (state.tokenIndex === 1 && reg_directions.exec(m)) {
-                                stream.match(/\s*/, true);
+                                stream.match(/[\p{Z}\s]*/u, true);
                                 return 'DIRECTION';
                             } else {
                                 if (state.names.indexOf(m) >= 0) {
@@ -1018,7 +1061,7 @@ var codeMirrorFn = function() {
                                         logError('Identifiers cannot appear outside of square brackets in rules, only directions can.', state.lineNumber);
                                         return 'ERROR';
                                     } else {
-                                        stream.match(/\s*/, true);
+                                        stream.match(/[\p{Z}\s]*/u, true);
                                         return 'NAME';
                                     }
                                 } else if (m==='...') {
@@ -1045,7 +1088,7 @@ var codeMirrorFn = function() {
                     {
                         if (sol) {
                         	var tokenized = reg_notcommentstart.exec(stream.string);
-                        	var splitted = tokenized[0].split(/\s/);
+                        	var splitted = tokenized[0].split(/[\p{Z}\s]/u);
                         	var filtered = splitted.filter(function(v) {return v !== ''});
                             filtered.push(state.lineNumber);
                             
@@ -1053,7 +1096,8 @@ var codeMirrorFn = function() {
                             state.tokenIndex = -1;
                         }
                         state.tokenIndex++;
-                        var match = stream.match(/\s*\w+\s*/);
+
+                        var match = stream.match(/[\p{Z}\s]*[\p{L}\p{N}_]+[\p{Z}\s]*/u);
                         if (match === null) {
                                 logError('incorrect format of win condition.', state.lineNumber);
                                 stream.match(reg_notcommentstart, true);
@@ -1071,6 +1115,7 @@ var codeMirrorFn = function() {
                             }
                             else if (state.tokenIndex === 2) {
                                 if (candword != 'on') {
+                                    logError('Expecting the word "ON" but got "'+candword.toUpperCase()+"'.", state.lineNumber);
                                     return 'ERROR';
                                 } else {
                                     return 'LOGICWORD';
@@ -1091,7 +1136,17 @@ var codeMirrorFn = function() {
                     {
                         if (sol)
                         {
-                            if (stream.match(/\s*message\s*/, true)) {
+                            if (stream.match(/[\p{Z}\s]*message\b[\p{Z}\s]*/u, true)) {
+                                state.tokenIndex = 1;//1/2 = message/level
+                                var newdat = ['\n', mixedCase.slice(stream.pos).trim(),state.lineNumber];
+                                if (state.levels[state.levels.length - 1].length == 0) {
+                                    state.levels.splice(state.levels.length - 1, 0, newdat);
+                                } else {
+                                    state.levels.push(newdat);
+                                }
+                                return 'MESSAGE_VERB';//a duplicate of the previous section as a legacy thing for #589 
+                            } else if (stream.match(/[\p{Z}\s]*message[\p{Z}\s]*/u, true)) {//duplicating previous section because of #589
+                                logWarning("You probably meant to put a space after 'message' innit.  That's ok, I'll still interpret it as a message, but you probably want to put a space there.",state.lineNumber);
                                 state.tokenIndex = 1;//1/2 = message/level
                                 var newdat = ['\n', mixedCase.slice(stream.pos).trim(),state.lineNumber];
                                 if (state.levels[state.levels.length - 1].length == 0) {
@@ -1101,26 +1156,33 @@ var codeMirrorFn = function() {
                                 }
                                 return 'MESSAGE_VERB';
                             } else {
-                                var line = stream.match(reg_notcommentstart, false)[0].trim();
-                                state.tokenIndex = 2;
-                                var lastlevel = state.levels[state.levels.length - 1];
-                                if (lastlevel[0] == '\n') {
-                                    state.levels.push([state.lineNumber,line]);
+                                var matches = stream.match(reg_notcommentstart, false);
+                                if (matches===null || matches.length===0){
+                                    logError("Detected a comment where I was expecting a level. Oh gosh; if this is to do with you using '(' as a character in the legend, please don't do that ^^",state.lineNumber);
+                                    state.commentLevel++;
+                                    stream.skipToEnd();
+                                    return 'comment';
                                 } else {
-                                    if (lastlevel.length==0)
-                                    {
-                                        lastlevel.push(state.lineNumber);
-                                    }
-                                    lastlevel.push(line);  
+                                    var line = matches[0].trim();
+                                    state.tokenIndex = 2;
+                                    var lastlevel = state.levels[state.levels.length - 1];
+                                    if (lastlevel[0] == '\n') {
+                                        state.levels.push([state.lineNumber,line]);
+                                    } else {
+                                        if (lastlevel.length==0)
+                                        {
+                                            lastlevel.push(state.lineNumber);
+                                        }
+                                        lastlevel.push(line);  
 
-                                    if (lastlevel.length>1) 
-                                    {
-                                        if (line.length!=lastlevel[1].length) {
-                                            logWarning("Maps must be rectangular, yo (In a level, the length of each row must be the same).",state.lineNumber);
+                                        if (lastlevel.length>1) 
+                                        {
+                                            if (line.length!=lastlevel[1].length) {
+                                                logWarning("Maps must be rectangular, yo (In a level, the length of each row must be the same).",state.lineNumber);
+                                            }
                                         }
                                     }
                                 }
-                                
                             }
                         } else {
                             if (state.tokenIndex == 1) {
@@ -1148,13 +1210,13 @@ var codeMirrorFn = function() {
 	            			state.tokenIndex=0;
 	            		}
 	            		if (state.tokenIndex==0) {
-		                    var match = stream.match(/\s*\w+\s*/);	                    
+		                    var match = stream.match(/[\p{Z}\s]*[\p{L}\p{N}_]+[\p{Z}\s]*/u);	                    
 		                    if (match!==null) {
 		                    	var token = match[0].trim();
 		                    	if (sol) {
 		                    		if (['title','author','homepage','background_color','text_color','key_repeat_interval','realtime_interval','again_interval','flickscreen','zoomscreen','color_palette','youtube'].indexOf(token)>=0) {
 		                    			
-                                        if (token==='youtube' || token==='author' || token==='title') {
+                                        if (token==='youtube' || token==='author' || token==='homepage' || token==='title') {
                                             stream.string=mixedCase;
                                         }
                                         

@@ -19,7 +19,7 @@ var intro_template = [
 	"..................................",
 	"..................................",
 	"......Puzzle Script Terminal......",
-	"..............v 1.6...............",
+	"..............v 1.7...............",
 	"..................................",
 	"..................................",
 	"..................................",
@@ -135,7 +135,7 @@ var titletemplate_select1_selected = [
 	".arrow keys to move...............",
 	".X to action......................",
 	".Z to undo, R to restart..........",
-	".................................."];
+	"................................."];
 
 var titleImage=[];
 var titleWidth=titletemplate_select1[0].length;
@@ -145,6 +145,10 @@ var titleScreen=true;
 var titleMode=0;//1 means there are options
 var titleSelection=0;
 var titleSelected=false;
+
+function showContinueOptionOnTitleScreen(){
+	return (curlevel>0||curlevelTarget!==null)&&(curlevel in state.levels);
+}
 
 function unloadGame() {
 	state=introstate;
@@ -157,7 +161,7 @@ function unloadGame() {
 
 function generateTitleScreen()
 {
-	titleMode=(curlevel>0||curlevelTarget!==null)?1:0;
+	titleMode=showContinueOptionOnTitleScreen()?1:0;
 
 	if (state.levels.length===0) {
 		titleImage=intro_template;
@@ -195,14 +199,14 @@ function generateTitleScreen()
 	var noUndo = 'noundo' in state.metadata;
 	var noRestart = 'norestart' in state.metadata;
 	if (noUndo && noRestart) {
-		titleImage[11]="..................................";
+		titleImage[11]="..............................................";
 	} else if (noUndo) {
-		titleImage[11]=".R to restart.....................";
+		titleImage[11]=".......R to restart...........................";
 	} else if (noRestart) {
 		titleImage[11]=".Z to undo.....................";
 	}
 	if (noAction) {
-		titleImage[10]=".X to select......................";
+		titleImage[10]=".......X to select............................";
 	}
 	for (var i=0;i<titleImage.length;i++)
 	{
@@ -211,6 +215,18 @@ function generateTitleScreen()
 
 	var width = titleImage[0].length;
 	var titlelines=wordwrap(title,titleImage[0].length);
+	if (state.metadata.author!==undefined){
+		if ( titlelines.length>3){
+			titlelines.splice(3);
+			logWarning("Game title is too long to fit on screen, truncating to three lines.",undefined,true);
+		}
+	} else {
+		if ( titlelines.length>5){
+			titlelines.splice(5);
+			logWarning("Game title is too long to fit on screen, truncating to five lines.",undefined,true);
+		}
+
+	}
 	for (var i=0;i<titlelines.length;i++) {
 		var titleline=titlelines[i];
 		var titleLength=titleline.length;
@@ -222,6 +238,13 @@ function generateTitleScreen()
 	if (state.metadata.author!==undefined) {
 		var attribution="by "+state.metadata.author;
 		var attributionsplit = wordwrap(attribution,titleImage[0].length);
+		if (attributionsplit[0].length<titleImage[0].length){
+			attributionsplit[0]=" "+attributionsplit[0];
+		}
+		if (attributionsplit.length>3){
+			attributionsplit.splice(3);
+			logWarning("Author list too long to fit on screen, truncating to three lines.",undefined,true);
+		}
 		for (var i=0;i<attributionsplit.length;i++) {
 			var line = attributionsplit[i]+" ";
 			if (line.length>width){
@@ -375,16 +398,17 @@ function drawMessageScreen() {
 
 var loadedLevelSeed=0;
 
-function loadLevelFromLevelDat(state,leveldat,randomseed) {	
+function loadLevelFromLevelDat(state,leveldat,randomseed,clearinputhistory) {	
 	if (randomseed==null) {
 		randomseed = (Math.random() + Date.now()).toString();
 	}
 	loadedLevelSeed = randomseed;
 	RandomGen = new RNG(loadedLevelSeed);
 	forceRegenImages=true;
+	ignoreNotJustPressedAction=true;
 	titleScreen=false;
-	titleMode=(curlevel>0||curlevelTarget!==null)?1:0;
-	titleSelection=(curlevel>0||curlevelTarget!==null)?1:0;
+	titleMode=showContinueOptionOnTitleScreen()?1:0;
+	titleSelection=showContinueOptionOnTitleScreen()?1:0;
 	titleSelected=false;
     againing=false;
     if (leveldat===undefined) {
@@ -422,15 +446,20 @@ function loadLevelFromLevelDat(state,leveldat,randomseed) {
 		keybuffer=[];
 
 	    if ('run_rules_on_level_start' in state.metadata) {
+			runrulesonlevelstart_phase=true;
 			processInput(-1,true);
+			runrulesonlevelstart_phase=false;
 	    }
 	} else {
+		ignoreNotJustPressedAction=true;
 		tryPlayShowMessageSound();
 		drawMessageScreen();
     	canvasResize();
 	}
 
-	clearInputHistory();
+	if (clearinputhistory===true){
+		clearInputHistory();
+	}
 }
 
 function loadLevelFromStateTarget(state,levelindex,target,randomseed) {	
@@ -671,13 +700,13 @@ function setGameState(_state, command, randomseed) {
 		    titleScreen=true;
 		    tryPlayTitleSound();
 		    textMode=true;
-		    titleSelection=(curlevel>0||curlevelTarget!==null)?1:0;
+		    titleSelection=showContinueOptionOnTitleScreen()?1:0;
 		    titleSelected=false;
 		    quittingMessageScreen=false;
 		    quittingTitleScreen=false;
 		    messageselected=false;
 		    titleMode = 0;
-		    if ((curlevel>0||curlevelTarget!==null)) {
+		    if (showContinueOptionOnTitleScreen()) {
 		    	titleMode=1;
 		    }
 		    generateTitleScreen();
@@ -694,12 +723,13 @@ function setGameState(_state, command, randomseed) {
 					continue;
 				}
 				var targetLevel = i;
-				curlevel=i;
+				curlevel=targetLevel;
+				curlevelTarget=null;
 			    winning=false;
 			    timer=0;
 			    titleScreen=false;
 			    textMode=false;
-			    titleSelection=(curlevel>0||curlevelTarget!==null)?1:0;
+			    titleSelection=showContinueOptionOnTitleScreen()?1:0;
 			    titleSelected=false;
 			    quittingMessageScreen=false;
 			    quittingTitleScreen=false;
@@ -713,12 +743,13 @@ function setGameState(_state, command, randomseed) {
 		case "loadLevel":
 		{
 			var targetLevel = command[1];
-			curlevel=i;
+			curlevel=targetLevel;
+			curlevelTarget=null;
 		    winning=false;
 		    timer=0;
 		    titleScreen=false;
 		    textMode=false;
-		    titleSelection=(curlevel>0||curlevelTarget!==null)?1:0;
+		    titleSelection=showContinueOptionOnTitleScreen()?1:0;
 		    titleSelected=false;
 		    quittingMessageScreen=false;
 		    quittingTitleScreen=false;
@@ -734,11 +765,12 @@ function setGameState(_state, command, randomseed) {
 				var level= state.levels[i];
 				if(level.lineNumber<=targetLine+1) {
 					curlevel=i;
+					curlevelTarget=null;
 				    winning=false;
 				    timer=0;
 				    titleScreen=false;
 				    textMode=false;
-				    titleSelection=(curlevel>0||curlevelTarget!==null)?1:0;
+				    titleSelection=showContinueOptionOnTitleScreen()?1:0;
 				    titleSelected=false;
 				    quittingMessageScreen=false;
 				    quittingTitleScreen=false;
@@ -772,8 +804,12 @@ function RebuildLevelArrays() {
     level.rigidMovementAppliedMask = [];
     level.rigidGroupIndexMask = [];
 	level.rowCellContents = [];
+	level.rowCellContents_Movements = [];
 	level.colCellContents = [];
+	level.colCellContents_Movements = [];
 	level.mapCellContents = new BitVec(STRIDE_OBJ);
+	level.mapCellContents_Movements = new BitVec(STRIDE_MOV);
+
 	_movementVecs = [new BitVec(STRIDE_MOV),new BitVec(STRIDE_MOV),new BitVec(STRIDE_MOV)];
 
 	_o1 = new BitVec(STRIDE_OBJ);
@@ -801,6 +837,13 @@ function RebuildLevelArrays() {
     	level.colCellContents[i]=new BitVec(STRIDE_OBJ);	    	
     }
 
+    for (var i=0;i<level.height;i++) {
+    	level.rowCellContents_Movements[i]=new BitVec(STRIDE_MOV);	    	
+    }
+    for (var i=0;i<level.width;i++) {
+    	level.colCellContents_Movements[i]=new BitVec(STRIDE_MOV);	    	
+    }
+
     for (var i=0;i<level.n_tiles;i++)
     {
         level.rigidMovementAppliedMask[i]=new BitVec(STRIDE_MOV);
@@ -809,10 +852,54 @@ function RebuildLevelArrays() {
 }
 
 var messagetext="";
+
+function applyDiff(diff, level_objects) {
+
+	var index=0;
+	
+	while (index<diff.dat.length){
+		var start_index = diff.dat[index];
+		var copy_length = diff.dat[index+1];
+		if (copy_length===0){
+			break;//tail of buffer is all 0s
+		}
+		for (j=0;j<copy_length;j++){
+			level_objects[start_index+j]=diff.dat[index+2+j];
+		}
+		index += 2 + copy_length;
+	}
+}
+
+function unconsolidateDiff(before,after) {
+
+	// If before is not a diff, return it, otherwise generate a complete 'before' 
+	// state from the 'after' state and the 'diff' (remember, the diffs are all 
+	// backwards...).
+	if (!before.hasOwnProperty("diff")) {
+		return before;
+	}
+
+	var after_objects = new Int32Array(after.dat);
+	applyDiff(before, after_objects);
+
+	return {
+		dat: after_objects,
+		width: before.width,
+		height: before.height,
+		oldflickscreendat: before.oldflickscreendat
+	}
+}
+
 function restoreLevel(lev) {
+	var diffing = lev.hasOwnProperty("diff");
+
 	oldflickscreendat=lev.oldflickscreendat.concat([]);
 
-	level.objects = new Int32Array(lev.dat);
+	if (diffing){
+		applyDiff(lev, level.objects);
+	} else {	
+		level.objects = new Int32Array(lev.dat);
+	}
 
 	if (level.width !== lev.width || level.height !== lev.height) {
 		level.width = lev.width;
@@ -851,16 +938,86 @@ var flickscreen=false;
 var screenwidth=0;
 var screenheight=0;
 
+//compresses 'before' into diff
+function consolidateDiff(before,after){
+	if (before.width !== after.width || before.height!==after.height || before.dat.length!==after.dat.length){
+		return before;
+	}
+	if (before.hasOwnProperty("diff")||after.hasOwnProperty("diff")){
+		return before;
+	}
+	//only generate diffs if level size is bigger than this
+	if (before.dat.length<1024){
+		return before;
+	}
+	//diff structure: repeating ( start,length, [ data ] )
+	var result = new Int32Array(128);
+	var position=0;
+	var chain=false;
+	var chain_start_idx_in_diff=-1;
+	var before_dat = before.dat;
+	var after_dat = after.dat;
+	for (var i=0;i<before_dat.length;i++){
+		if (chain===false){
+			if (before_dat[i]!==after_dat[i]){
+				chain=true;
+				chain_start_idx_in_diff = position;
+
+				if (result.length<position+4){
+					var doubled = new Int32Array(2*result.length);
+					doubled.set(result);
+					result = doubled;
+				}
+
+				result[position+0]=i;
+				result[position+1]=1;
+				result[position+2]=before_dat[i];
+				position+=3;
+			}
+		} else {
+			if (before_dat[i]!==after_dat[i]){
+				
+				if (position+1>=result.length){
+					if (result.length<position+4){
+						var doubled = new Int32Array(2*result.length);
+						doubled.set(result);
+						result = doubled;
+					}	
+				}
+				result[chain_start_idx_in_diff+1]++;
+				result[position]=before_dat[i];
+				position++;
+			} else {
+				chain=false;
+			}
+		}
+	}
+	return {		
+		diff : true,
+		dat : result,
+		width : before.width,
+		height : before.height,
+		oldflickscreendat: before.oldflickscreendat
+	}
+}
+
+function addUndoState(state){
+	backups.push(state);
+	if(backups.length>2 && !backups[backups.length-1].hasOwnProperty("diff")){
+		backups[backups.length-3]=consolidateDiff(backups[backups.length-3],backups[backups.length-2]);
+	}
+}
+
 function DoRestart(force) {
 	if (restarting===true){
 		return;
 	}
-	restarting=true;
 	if (force!==true && ('norestart' in state.metadata)) {
 		return;
 	}
-	if (force===false) {
-		backups.push(backupLevel());
+	restarting=true;
+	if (force!==true) {
+		addUndoState(backupLevel());
 	}
 
 	if (verbose_logging) {
@@ -884,12 +1041,17 @@ function backupDiffers(){
 		return true;
 	}
 	var bak = backups[backups.length-1];
-	for (var i=0;i<level.objects.length;i++) {
-    	if (level.objects[i]!==bak.dat[i]) {
-    		return true;
-    	}
-    }
-    return false;
+
+	if (bak.hasOwnProperty("diff")){
+		return bak.dat.length!==0 && bak.dat[1]!==0;//if it's empty or if it's all 0s
+	} else {
+		for (var i=0;i<level.objects.length;i++) {
+			if (level.objects[i]!==bak.dat[i]) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
 
 function DoUndo(force,ignoreDuplicates) {
@@ -950,6 +1112,12 @@ function moveEntitiesAtIndex(positionIndex, entityMask, dirMask) {
     	movementMask.ishiftor(dirMask, 5 * layers[i]);
     }
     level.setMovements(positionIndex, movementMask);
+
+	var colIndex=(positionIndex/level.height)|0;
+	var rowIndex=(positionIndex%level.height);
+	level.colCellContents_Movements[colIndex].ior(movementMask);
+	level.rowCellContents_Movements[rowIndex].ior(movementMask);
+	level.mapCellContents_Movements.ior(movementMask);
 }
 
 
@@ -1030,12 +1198,14 @@ function repositionEntitiesOnLayer(positionIndex,layer,dirMask)
 
     level.setCell(positionIndex, sourceMask);
     level.setCell(targetIndex, targetMask);
-
+	
     var colIndex=(targetIndex/level.height)|0;
 	var rowIndex=(targetIndex%level.height);
+	
     level.colCellContents[colIndex].ior(movingEntities);
     level.rowCellContents[rowIndex].ior(movingEntities);
     level.mapCellContents.ior(movingEntities);
+	//corresponding movement stuff in setmovements
     return true;
 }
 
@@ -1073,6 +1243,12 @@ function Level(lineNumber, width, height, layerCount, objects) {
 	this.commandQueueSourceRules = [];
 }
 
+Level.prototype.delta_index = function(direction)
+{
+	const [dx, dy] = dirMasksDelta[direction]
+	return dx*this.height + dy
+}
+
 Level.prototype.clone = function() {
 	var clone = new Level(this.lineNumber, this.width, this.height, this.layerCount, null);
 	clone.objects = new Int32Array(this.objects);
@@ -1108,10 +1284,30 @@ Level.prototype.getMovements = function(index) {
 	return _movementsVec;
 }
 
+Level.prototype.getMovementsInto = function(index,targetarray) {
+	var _movementsVec=targetarray;
+
+	for (var i=0;i<STRIDE_MOV;i++) {
+		_movementsVec.data[i]=this.movements[index*STRIDE_MOV+i];	
+	}
+	return _movementsVec;
+}
+
 Level.prototype.setMovements = function(index, vec) {
 	for (var i = 0; i < vec.data.length; ++i) {
 		this.movements[index * STRIDE_MOV + i] = vec.data[i];
 	}
+
+	var targetIndex = index*STRIDE_MOV + i;
+		
+	//corresponding object stuff in repositionEntitiesOnLayer
+	var colIndex=(index/this.height)|0;
+	var rowIndex=(index%this.height);
+	level.colCellContents_Movements[colIndex].ior(vec);
+	level.rowCellContents_Movements[rowIndex].ior(vec);
+	level.mapCellContents_Movements.ior(vec);
+
+
 }
 
 var ellipsisPattern = ['ellipsis'];
@@ -1134,6 +1330,13 @@ BitVec.prototype.clone = function() {
 BitVec.prototype.iand = function(other) {
 	for (var i = 0; i < this.data.length; ++i) {
 		this.data[i] &= other.data[i];
+	}
+}
+
+
+BitVec.prototype.inot = function() {
+	for (var i = 0; i < this.data.length; ++i) {
+		this.data[i] = ~this.data[i];
 	}
 }
 
@@ -1247,6 +1450,14 @@ function Rule(rule) {
 	this.commands = rule[7];		/* cancel, restart, sfx, etc */
 	this.isRandom = rule[8];
 	this.cellRowMasks = rule[9];
+	this.cellRowMasks_Movements = rule[10];
+	this.ruleMask = this.cellRowMasks.reduce( (acc, m) => { acc.ior(m); return acc }, new BitVec(STRIDE_OBJ) );
+
+	/*I tried out doing a ruleMask_movements as well along the lines of the above,
+	but it didn't help at all - I guess because almost every tick there are movements 
+	somewhere on the board - move filtering works well at a row/col level, but is pretty 
+	useless (or worse than useless) on a boardwide level*/
+
 	this.cellRowMatches = [];
 	for (var i=0;i<this.patterns.length;i++) {
 		this.cellRowMatches.push(this.generateCellRowMatchesFunction(this.patterns[i],this.isEllipsis[i]));
@@ -1258,26 +1469,23 @@ function Rule(rule) {
 
 Rule.prototype.generateCellRowMatchesFunction = function(cellRow,hasEllipsis)  {
 	if (hasEllipsis==false) {
-		var delta = dirMasksDelta[this.direction];
-		var d0 = delta[0];
-		var d1 = delta[1];
 		var cr_l = cellRow.length;
 
-			/*
-			hard substitute in the first one - if I substitute in all of them, firefox chokes.
-			*/
-		var fn = "var d = "+d1+"+"+d0+"*level.height;\n";
+		/*
+		hard substitute in the first one - if I substitute in all of them, firefox chokes.
+		*/
+		var fn = "";
 		var mul = STRIDE_OBJ === 1 ? '' : '*'+STRIDE_OBJ;	
 		for (var i = 0; i < STRIDE_OBJ; ++i) {
-			fn += 'var cellObjects' + i + ' = level.objects[i' + mul + (i ? '+'+i: '') + '];\n';
+			fn += 'var cellObjects' + i + ' = objects[i' + mul + (i ? '+'+i: '') + '];\n';
 		}
 		mul = STRIDE_MOV === 1 ? '' : '*'+STRIDE_MOV;
 		for (var i = 0; i < STRIDE_MOV; ++i) {
-			fn += 'var cellMovements' + i + ' = level.movements[i' + mul + (i ? '+'+i: '') + '];\n';
+			fn += 'var cellMovements' + i + ' = movements[i' + mul + (i ? '+'+i: '') + '];\n';
 		}
 		fn += "return "+cellRow[0].generateMatchString('0_');// cellRow[0].matches(i)";
 		for (var cellIndex=1;cellIndex<cr_l;cellIndex++) {
-			fn+="&&cellRow["+cellIndex+"].matches((i+"+cellIndex+"*d))";
+			fn+="&&cellRow["+cellIndex+"].matches(i+"+cellIndex+"*d, objects, movements)";
 		}
 		fn+=";";
 
@@ -1285,28 +1493,23 @@ Rule.prototype.generateCellRowMatchesFunction = function(cellRow,hasEllipsis)  {
 			return matchCache[fn];
 		}
 		//console.log(fn.replace(/\s+/g, ' '));
-		return matchCache[fn] = new Function("cellRow","i",fn);
+		return matchCache[fn] = new Function("cellRow","i", 'd', 'objects', 'movements',fn);
 	} else {
-		var delta = dirMasksDelta[this.direction];
-		var d0 = delta[0];
-		var d1 = delta[1];
 		var cr_l = cellRow.length;
 
-
-		var fn = "var d = "+d1+"+"+d0+"*level.height;\n";
-		fn += "var result = [];\n"
-		fn += "if(cellRow[0].matches(i)";
+		var fn = "var result = [];\n"
+		fn += "if(cellRow[0].matches(i, objects, movements)";
 		var cellIndex=1;
 		for (;cellRow[cellIndex]!==ellipsisPattern;cellIndex++) {
-			fn+="&&cellRow["+cellIndex+"].matches((i+"+cellIndex+"*d))";
+			fn+="&&cellRow["+cellIndex+"].matches(i+"+cellIndex+"*d, objects, movements)";
 		}
 		cellIndex++;
 		fn+=") {\n";
 		fn+="\tfor (var k=kmin;k<kmax;k++) {\n"
-		fn+="\t\tif(cellRow["+cellIndex+"].matches((i+d*(k+"+(cellIndex-1)+")))";
+		fn+="\t\tif(cellRow["+cellIndex+"].matches((i+d*(k+"+(cellIndex-1)+")), objects, movements)";
 		cellIndex++;
 		for (;cellIndex<cr_l;cellIndex++) {
-			fn+="&&cellRow["+cellIndex+"].matches((i+d*(k+"+(cellIndex-1)+")))";			
+			fn+="&&cellRow["+cellIndex+"].matches((i+d*(k+"+(cellIndex-1)+")), objects, movements)";			
 		}
 		fn+="){\n";
 		fn+="\t\t\tresult.push([i,k]);\n";
@@ -1320,7 +1523,7 @@ Rule.prototype.generateCellRowMatchesFunction = function(cellRow,hasEllipsis)  {
 			return matchCache[fn];
 		}
 		//console.log(fn.replace(/\s+/g, ' '));
-		return matchCache[fn] = new Function("cellRow","i","kmax","kmin",fn);
+		return matchCache[fn] = new Function("cellRow","i","kmax","kmin", 'd', "objects", "movements",fn);
 	}
 //say cellRow has length 3, with a split in the middle
 /*
@@ -1347,7 +1550,8 @@ Rule.prototype.toJSON = function() {
 	/* match construction order for easy deserialization */
 	return [
 		this.direction, this.patterns, this.hasReplacements, this.lineNumber, this.isEllipsis,
-		this.groupNumber, this.isRigid, this.commands, this.isRandom, this.cellRowMasks
+		this.groupNumber, this.isRigid, this.commands, this.isRandom, this.cellRowMasks,
+		this.cellRowMasks_Movements
 	];
 };
 
@@ -1423,18 +1627,18 @@ CellPattern.prototype.generateMatchFunction = function() {
 	var fn = '';
 	var mul = STRIDE_OBJ === 1 ? '' : '*'+STRIDE_OBJ;	
 	for (var i = 0; i < STRIDE_OBJ; ++i) {
-		fn += '\tvar cellObjects' + i + ' = level.objects[i' + mul + (i ? '+'+i: '') + '];\n';
+		fn += '\tvar cellObjects' + i + ' = objects[i' + mul + (i ? '+'+i: '') + '];\n';
 	}
 	mul = STRIDE_MOV === 1 ? '' : '*'+STRIDE_MOV;
 	for (var i = 0; i < STRIDE_MOV; ++i) {
-		fn += '\tvar cellMovements' + i + ' = level.movements[i' + mul + (i ? '+'+i: '') + '];\n';
+		fn += '\tvar cellMovements' + i + ' = movements[i' + mul + (i ? '+'+i: '') + '];\n';
 	}
 	fn += "return " + this.generateMatchString()+';';
 	if (fn in matchCache) {
 		return matchCache[fn];
 	}
 	//console.log(fn.replace(/\s+/g, ' '));
-	return matchCache[fn] = new Function("i",fn);
+	return matchCache[fn] = new Function("i", "objects", "movements", fn);
 }
 
 CellPattern.prototype.toJSON = function() {
@@ -1548,6 +1752,11 @@ CellPattern.prototype.replace = function(rule, currentIndex) {
 		level.colCellContents[colIndex].ior(curCellMask);
 		level.rowCellContents[rowIndex].ior(curCellMask);
 		level.mapCellContents.ior(curCellMask);
+
+		level.colCellContents_Movements[colIndex].ior(curMovementMask);
+		level.rowCellContents_Movements[rowIndex].ior(curMovementMask);
+		level.mapCellContents_Movements.ior(curMovementMask);
+
 	}
 
 	return result;
@@ -1570,7 +1779,7 @@ function cellRowMatchesWildcardFunctionGenerate(direction,cellRow,i, maxk, mink)
 	return result;
 }
 */
-
+/*
 function DoesCellRowMatchWildCard(direction,cellRow,i,maxk,mink) {
 	if (mink === undefined) {
 		mink = 0;
@@ -1616,7 +1825,7 @@ function DoesCellRowMatchWildCard(direction,cellRow,i,maxk,mink) {
     }  
     return false;
 }
-
+*/
 //say cellRow has length 3
 /*
 CellRow Matches can be specialized to look something like:
@@ -1626,7 +1835,7 @@ function cellRowMatchesFunctionGenerate(direction,cellRow,i) {
 	return cellRow[0].matches(i)&&cellRow[1].matches((i+d)%level.n_tiles)&&cellRow[2].matches((i+2*d)%level.n_tiles);
 }
 */
-
+/*
 function DoesCellRowMatch(direction,cellRow,i,k) {
 	var cellPattern = cellRow[0];
     if (cellPattern.matches(i)) {
@@ -1656,11 +1865,12 @@ function DoesCellRowMatch(direction,cellRow,i,k) {
     }  
     return false;
 }
-
-function matchCellRow(direction, cellRowMatch, cellRow, cellRowMask) {	
+*/
+function matchCellRow(direction, cellRowMatch, cellRow, cellRowMask,cellRowMask_Movements,d) {	
 	var result=[];
 	
-	if ((!cellRowMask.bitsSetInArray(level.mapCellContents.data))) {
+	if ((!cellRowMask.bitsSetInArray(level.mapCellContents.data))||
+	(!cellRowMask_Movements.bitsSetInArray(level.mapCellContents_Movements.data))) {
 		return result;
 	}
 
@@ -1701,13 +1911,14 @@ function matchCellRow(direction, cellRowMatch, cellRow, cellRowMask) {
     var horizontal=direction>2;
     if (horizontal) {
 		for (var y=ymin;y<ymax;y++) {
-			if (!cellRowMask.bitsSetInArray(level.rowCellContents[y].data)) {
+			if (!cellRowMask.bitsSetInArray(level.rowCellContents[y].data) 
+			|| !cellRowMask_Movements.bitsSetInArray(level.rowCellContents_Movements[y].data)) {
 				continue;
 			}
 
 			for (var x=xmin;x<xmax;x++) {
 				var i = x*level.height+y;
-				if (cellRowMatch(cellRow,i))
+				if (cellRowMatch(cellRow,i,d, level.objects, level.movements))
 				{
 					result.push(i);
 				}
@@ -1715,13 +1926,14 @@ function matchCellRow(direction, cellRowMatch, cellRow, cellRowMask) {
 		}
 	} else {
 		for (var x=xmin;x<xmax;x++) {
-			if (!cellRowMask.bitsSetInArray(level.colCellContents[x].data)) {
+			if (!cellRowMask.bitsSetInArray(level.colCellContents[x].data)
+			|| !cellRowMask_Movements.bitsSetInArray(level.colCellContents_Movements[x].data)) {
 				continue;
 			}
 
 			for (var y=ymin;y<ymax;y++) {
 				var i = x*level.height+y;
-				if (cellRowMatch(	cellRow,i))
+				if (cellRowMatch(	cellRow,i, d, level.objects, level.movements))
 				{
 					result.push(i);
 				}
@@ -1733,11 +1945,13 @@ function matchCellRow(direction, cellRowMatch, cellRow, cellRowMask) {
 }
 
 
-function matchCellRowWildCard(direction, cellRowMatch, cellRow,cellRowMask) {
+function matchCellRowWildCard(direction, cellRowMatch, cellRow,cellRowMask,cellRowMask_Movements,d) {
 	var result=[];
-	if ((!cellRowMask.bitsSetInArray(level.mapCellContents.data))) {
+	if ((!cellRowMask.bitsSetInArray(level.mapCellContents.data))
+	|| (!cellRowMask_Movements.bitsSetInArray(level.mapCellContents_Movements.data))) {
 		return result;
 	}
+	
 	var xmin=0;
 	var xmax=level.width;
 	var ymin=0;
@@ -1776,7 +1990,8 @@ function matchCellRowWildCard(direction, cellRowMatch, cellRow,cellRowMask) {
     var horizontal=direction>2;
     if (horizontal) {
 		for (var y=ymin;y<ymax;y++) {
-			if (!cellRowMask.bitsSetInArray(level.rowCellContents[y].data)) {
+			if (!cellRowMask.bitsSetInArray(level.rowCellContents[y].data)
+			|| !cellRowMask_Movements.bitsSetInArray(level.rowCellContents_Movements[y].data) ) {
 				continue;
 			}
 
@@ -1792,12 +2007,13 @@ function matchCellRowWildCard(direction, cellRowMatch, cellRow,cellRowMask) {
 					window.console.log("EEEP2 "+direction);					
 				}
 
-				result.push.apply(result, cellRowMatch(cellRow,i,kmax,0));
+				result.push.apply(result, cellRowMatch(cellRow,i,kmax,0, d, level.objects, level.movements));
 			}
 		}
 	} else {
 		for (var x=xmin;x<xmax;x++) {
-			if (!cellRowMask.bitsSetInArray(level.colCellContents[x].data)) {
+			if (!cellRowMask.bitsSetInArray(level.colCellContents[x].data)
+			|| !cellRowMask_Movements.bitsSetInArray(level.colCellContents_Movements[x].data)) {
 				continue;
 			}
 
@@ -1812,7 +2028,7 @@ function matchCellRowWildCard(direction, cellRowMatch, cellRow,cellRowMask) {
 				} else {
 					window.console.log("EEEP2 "+direction);
 				}
-				result.push.apply(result, cellRowMatch(cellRow,i,kmax,0));
+				result.push.apply(result, cellRowMatch(cellRow,i,kmax,0, d, level.objects, level.movements));
 			}
 		}		
 	}
@@ -1840,48 +2056,24 @@ function generateTuples(lists) {
     return tuples;
 }
 
-var rigidBackups=[]
 
-function commitPreservationState(ruleGroupIndex) {
-	var propagationState = {
-		ruleGroupIndex:ruleGroupIndex,
-		objects:new Int32Array(level.objects),
-		movements:new Int32Array(level.movements),
-		rigidGroupIndexMask:level.rigidGroupIndexMask.concat([]),
-		rigidMovementAppliedMask:level.rigidMovementAppliedMask.concat([]),
-		bannedGroup:level.bannedGroup.concat([]),
-		commandQueue:level.commandQueue.concat([]),
-		commandQueueSourceRules:level.commandQueueSourceRules.concat([])
-	};
-	rigidBackups[ruleGroupIndex]=propagationState;
-	return propagationState;
-}
 
-function restorePreservationState(preservationState) {;
-//don't need to concat or anythign here, once something is restored it won't be used again.
-	level.objects = new Int32Array(preservationState.objects);
-	level.movements = new Int32Array(preservationState.movements);
-	level.rigidGroupIndexMask = preservationState.rigidGroupIndexMask.concat([]);
-    level.rigidMovementAppliedMask = preservationState.rigidMovementAppliedMask.concat([]);
-    level.commandQueue = preservationState.commandQueue.concat([]);
-    level.commandQueueSourceRules = preservationState.commandQueueSourceRules.concat([]);
-    sfxCreateMask.setZero();
-    sfxDestroyMask.setZero();
-	consolePrint("Rigid movement application failed, rolling back");
+Rule.prototype.findMatches = function() {	
+	if ( ! this.ruleMask.bitsSetInArray(level.mapCellContents.data) )
+		return [];
 
-//	rigidBackups = preservationState.rigidBackups;
-}
+	const d = level.delta_index(this.direction)
 
-Rule.prototype.findMatches = function() {
 	var matches=[];
 	var cellRowMasks=this.cellRowMasks;
+	var cellRowMasks_Movements=this.cellRowMasks_Movements;
     for (var cellRowIndex=0;cellRowIndex<this.patterns.length;cellRowIndex++) {
         var cellRow = this.patterns[cellRowIndex];
         var matchFunction = this.cellRowMatches[cellRowIndex];
         if (this.isEllipsis[cellRowIndex]) {//if ellipsis     
-        	var match = matchCellRowWildCard(this.direction,matchFunction,cellRow,cellRowMasks[cellRowIndex]);  
+        	var match = matchCellRowWildCard(this.direction,matchFunction,cellRow,cellRowMasks[cellRowIndex],cellRowMasks_Movements[cellRowIndex],d);  
         } else {
-        	var match = matchCellRow(this.direction,matchFunction,cellRow,cellRowMasks[cellRowIndex]);               	
+        	var match = matchCellRow(this.direction,matchFunction,cellRow,cellRowMasks[cellRowIndex],cellRowMasks_Movements[cellRowIndex],d);               	
         }
         if (match.length===0) {
             return [];
@@ -1910,35 +2102,28 @@ Rule.prototype.directional = function(){
     return false;
 }
 
-Rule.prototype.applyAt = function(delta,tuple,check) {
+Rule.prototype.applyAt = function(level,tuple,check,delta) {
 	var rule = this;
-	//have to double check they apply
-	//Q: why?
-    if (check) {
-        var ruleMatches=true;                
-        for (var cellRowIndex=0;cellRowIndex<rule.patterns.length;cellRowIndex++) {
-        	if (rule.isEllipsis[cellRowIndex]) {//if ellipsis
-            	if (DoesCellRowMatchWildCard(rule.direction,rule.patterns[cellRowIndex],tuple[cellRowIndex][0],
-            		tuple[cellRowIndex][1]+1, tuple[cellRowIndex][1])===false) { /* pass mink to specify */
-                    ruleMatches=false;
-                    break;
-                }
-        	} else {
-            	if (DoesCellRowMatch(rule.direction,rule.patterns[cellRowIndex],tuple[cellRowIndex])===false) {
-                    ruleMatches=false;
-                    break;
-                }
-        	}
-        }
-        if (ruleMatches === false ) {
-            return false;
-        }
-    }
+	//have to double check they apply 
+	//(cf test ellipsis bug: rule matches two candidates, first replacement invalidates second)
+	if (check)
+	{
+		for (var cellRowIndex=0; cellRowIndex<this.patterns.length; cellRowIndex++)
+		{
+			if (this.isEllipsis[cellRowIndex]) //if ellipsis
+			{
+				if ( this.cellRowMatches[cellRowIndex](this.patterns[cellRowIndex], tuple[cellRowIndex][0], tuple[cellRowIndex][1]+1, tuple[cellRowIndex][1], delta, level.objects, level.movements).length == 0 )
+					return false
+			}
+			else if ( ! this.cellRowMatches[cellRowIndex](this.patterns[cellRowIndex], tuple[cellRowIndex], delta, level.objects, level.movements) )
+				return false
+		}
+	}
+
+
     var result=false;
     
     //APPLY THE RULE
-    var d0 = delta[0]*level.height;
-    var d1 = delta[1];
     for (var cellRowIndex=0;cellRowIndex<rule.patterns.length;cellRowIndex++) {
         var preRow = rule.patterns[cellRowIndex];
         
@@ -1948,13 +2133,13 @@ Rule.prototype.applyAt = function(delta,tuple,check) {
 
             if (preCell === ellipsisPattern) {
             	var k = tuple[cellRowIndex][1];
-            	currentIndex = (currentIndex+(d1+d0)*k);
+            	currentIndex += delta*k;
             	continue;
             }
 
             result = preCell.replace(rule, currentIndex) || result;
 
-            currentIndex = (currentIndex+d1+d0);
+            currentIndex += delta;
         }
     }
 
@@ -1964,16 +2149,17 @@ Rule.prototype.applyAt = function(delta,tuple,check) {
 			ruleDirection="";
 		}
 
-		var logString = '<font color="green">Rule <a onclick="jumpToLine(' + rule.lineNumber + ');"  href="javascript:void(0);">' + rule.lineNumber + '</a> ' + 
-			ruleDirection + ' applied.</font>';
-		consolePrint(logString);
+		var inspect_ID =  addToDebugTimeline(level,rule.lineNumber);
+		var logString = `<font color="green">Rule <a onclick="jumpToLine(${rule.lineNumber});"  href="javascript:void(0);">${rule.lineNumber}</a> ${ruleDirection} applied.</font>`;
+		consolePrint(logString,false,rule.lineNumber,inspect_ID);
+		
 	}
 
     return result;
 };
 
-Rule.prototype.tryApply = function() {
-	var delta = dirMasksDelta[this.direction];
+Rule.prototype.tryApply = function(level) {
+	const delta = level.delta_index(this.direction);
 
     //get all cellrow matches
     var matches = this.findMatches();
@@ -1987,7 +2173,7 @@ Rule.prototype.tryApply = function() {
 	    for (var tupleIndex=0;tupleIndex<tuples.length;tupleIndex++) {
 	        var tuple = tuples[tupleIndex];
 	        var shouldCheck=tupleIndex>0;
-	        var success = this.applyAt(delta,tuple,shouldCheck);
+	        var success = this.applyAt(level,tuple,shouldCheck,delta);
 	        result = success || result;
 	    }
 	}
@@ -2000,6 +2186,43 @@ Rule.prototype.tryApply = function() {
 
 Rule.prototype.queueCommands = function() {
 	var commands = this.commands;
+	
+	if (commands.length==0){
+		return;
+	}
+
+	//commandQueue is an array of strings, message.commands is an array of array of strings (For messagetext parameter), so I search through them differently
+	var preexisting_cancel=level.commandQueue.indexOf("cancel")>=0;
+	var preexisting_restart=level.commandQueue.indexOf("restart")>=0;
+	
+	var currule_cancel = false;
+	var currule_restart = false;
+	for (var i=0;i<commands.length;i++){
+		var cmd = commands[i][0];
+		if (cmd==="cancel"){
+			currule_cancel=true;
+		} else if (cmd==="restart"){
+			currule_restart=true;
+		}
+	}
+
+	//priority cancel > restart > everything else
+	//if cancel is the queue from other rules, ignore everything
+	if (preexisting_cancel){
+		return;
+	}
+	//if restart is in the queue from other rules, only apply if there's a cancel present here
+	if (preexisting_restart && !currule_cancel){
+		return;
+	}
+
+	//if you are writing a cancel or restart, clear the current queue
+	if (currule_cancel || currule_restart){
+		level.commandQueue=[];
+        level.commandQueueSourceRules=[];
+		messagetext="";
+	}
+
 	for(var i=0;i<commands.length;i++) {
 		var command=commands[i];
 		var already=false;
@@ -2013,7 +2236,7 @@ Rule.prototype.queueCommands = function() {
 			var lineNumber = this.lineNumber;
 			var ruleDirection = dirMaskName[this.direction];
 			var logString = '<font color="green">Rule <a onclick="jumpToLine(' + lineNumber.toString() + ');"  href="javascript:void(0);">' + lineNumber.toString() + '</a> triggers command '+command[0]+'.</font>';
-			consolePrint(logString,true);
+			consolePrint(logString,false,lineNumber,null);
 		}
 
 		if (command[0]==='message') {			
@@ -2028,12 +2251,27 @@ function showTempMessage() {
 	titleScreen=false;
 	quittingMessageScreen=false;
 	messageselected=false;
+	ignoreNotJustPressedAction=true;
 	tryPlayShowMessageSound();
 	drawMessageScreen();
 	canvasResize();
 }
 
-function applyRandomRuleGroup(ruleGroup) {
+function processOutputCommands(commands) {
+	for (var i=0;i<commands.length;i++) {
+		var command = commands[i];
+		if (command.charAt(1)==='f')  {//identifies sfxN
+			tryPlaySimpleSound(command);
+		}
+		if (unitTesting===false) {
+			if (command==='message') {
+				showTempMessage();
+			}
+		}
+	}
+}
+
+function applyRandomRuleGroup(level,ruleGroup) {
 	var propagated=false;
 
 	var matches=[];
@@ -2057,24 +2295,26 @@ function applyRandomRuleGroup(ruleGroup) {
 	var match = matches[Math.floor(RandomGen.uniform()*matches.length)];
 	var ruleIndex=match[0];
 	var rule=ruleGroup[ruleIndex];
-	var delta = dirMasksDelta[rule.direction];
 	var tuple=match[1];
 	var check=false;
-	var modified = rule.applyAt(delta,tuple,check);
+	const delta = level.delta_index(rule.direction)
+	var modified = rule.applyAt(level,tuple,check,delta);
 
    	rule.queueCommands();
 
 	return modified;
 }
 
+
 function applyRuleGroup(ruleGroup) {
 	if (ruleGroup[0].isRandom) {
-		return applyRandomRuleGroup(ruleGroup);
+		return applyRandomRuleGroup(level,ruleGroup);
 	}
 
 	var loopPropagated=false;
     var propagated=true;
     var loopcount=0;
+	var nothing_happened_counter = -1;
     while(propagated) {
     	loopcount++;
     	if (loopcount>200) 
@@ -2083,12 +2323,25 @@ function applyRuleGroup(ruleGroup) {
     		break;
     	}
         propagated=false;
+
         for (var ruleIndex=0;ruleIndex<ruleGroup.length;ruleIndex++) {
-            var rule = ruleGroup[ruleIndex];            
-            propagated = rule.tryApply() || propagated;
+            var rule = ruleGroup[ruleIndex];     
+			if (rule.tryApply(level)){
+				propagated=true;
+				nothing_happened_counter=0;//why am I resetting to 1 rather than 0? because I've just verified that applications of the current rule are exhausted
+			} else {
+				nothing_happened_counter++;
+			}
+			if ( nothing_happened_counter === ruleGroup.length)
+				break;
         }
         if (propagated) {
         	loopPropagated=true;
+			
+			if (verbose_logging){
+				debugger_turnIndex++;
+				addToDebugTimeline(level,-2);//pre-movement-applied debug state
+			}
         }
     }
 
@@ -2118,6 +2371,11 @@ function applyRules(rules, loopPoint, startRuleGroupindex, bannedGroup){
 			   	logErrorCacheable("got caught in an endless startloop...endloop vortex, escaping!", ruleGroup[0].lineNumber,true);
 			   	break;
 			}
+			
+			if (verbose_logging){
+				debugger_turnIndex++;
+				addToDebugTimeline(level,-2);//pre-movement-applied debug state
+			}
         } else {
         	ruleGroupIndex++;
         	if (ruleGroupIndex===rules.length) {
@@ -2132,13 +2390,18 @@ function applyRules(rules, loopPoint, startRuleGroupindex, bannedGroup){
 					}
 		        } 
         	}
+			
+			if (verbose_logging){
+				debugger_turnIndex++;
+				addToDebugTimeline(level,-2);//pre-movement-applied debug state
+			}
         }
     }
 }
 
 
 //if this returns!=null, need to go back and reprocess
-function resolveMovements(dir){
+function resolveMovements(level, bannedGroup){
     var moved=true;
     while(moved){
         moved=false;
@@ -2165,7 +2428,7 @@ function resolveMovements(dir){
 							var rigidGroupIndex = rigidGroupIndexMask.getshiftor(0x1f, 5*j);
 							rigidGroupIndex--;//group indices start at zero, but are incremented for storing in the bitfield
 							var groupIndex = state.rigidGroupIndex_to_GroupIndex[rigidGroupIndex];
-							level.bannedGroup[groupIndex]=true;
+							bannedGroup[groupIndex]=true;
 							//backtrackTarget = rigidBackups[rigidGroupIndex];
 							doUndo=true;
 							break;
@@ -2200,16 +2463,21 @@ var sfxDestroyMask=null;
 function calculateRowColMasks() {
 	for(var i=0;i<level.mapCellContents.length;i++) {
 		level.mapCellContents[i]=0;
+		level.mapCellContents_Movements[i]=0;	
 	}
 
 	for (var i=0;i<level.width;i++) {
 		var ccc = level.colCellContents[i];
 		ccc.setZero();
+		var ccc_Movements = level.colCellContents_Movements[i];
+		ccc_Movements.setZero();
 	}
 
 	for (var i=0;i<level.height;i++) {
 		var rcc = level.rowCellContents[i];
 		rcc.setZero();
+		var rcc_Movements = level.rowCellContents_Movements[i];
+		rcc_Movements.setZero();
 	}
 
 	for (var i=0;i<level.width;i++) {
@@ -2219,6 +2487,12 @@ function calculateRowColMasks() {
 			level.mapCellContents.ior(cellContents);
 			level.rowCellContents[j].ior(cellContents);
 			level.colCellContents[i].ior(cellContents);
+
+			
+			var mapCellContents_Movements=level.getMovementsInto(index,_m1);
+			level.mapCellContents_Movements.ior(mapCellContents_Movements);
+			level.rowCellContents_Movements[j].ior(mapCellContents_Movements);
+			level.colCellContents_Movements[i].ior(mapCellContents_Movements);
 		}
 	}
 }
@@ -2227,19 +2501,21 @@ function calculateRowColMasks() {
 function processInput(dir,dontDoWin,dontModify) {
 	againing = false;
 
-	if (verbose_logging) { 
-	 	if (dir===-1) {
-	 		consolePrint('Turn starts with no input.')
-	 	} else {
-	 		consolePrint('=======================');
-			consolePrint('Turn starts with input of ' + ['up','left','down','right','action'][dir]+'.');
-	 	}
-	}
+
 
 	var bak = backupLevel();
+	var inputindex=dir;
 
 	var playerPositions=[];
-    if (dir<=4) {
+    if (dir<=4) {//when is dir>4???
+
+
+		if (verbose_logging) { 
+			debugger_turnIndex++;
+			addToDebugTimeline(level,-2);//pre-movement-applied debug state
+		}
+
+
     	if (dir>=0) {
 	        switch(dir){
 	            case 0://up
@@ -2270,15 +2546,35 @@ function processInput(dir,dontDoWin,dontModify) {
 	        }
 	        playerPositions = startMovement(dir);
 		}
+			
+		
+		if (verbose_logging) { 
+			consolePrint('Applying rules');
 
-        var i=0;
-        level.bannedGroup = [];
-        rigidBackups = [];
+			var inspect_ID = addToDebugTimeline(level,-1);
+				
+			 if (dir===-1) {
+				 consolePrint(`Turn starts with no input.`,false,null,inspect_ID)
+			 } else {
+				//  consolePrint('=======================');
+				consolePrint(`Turn starts with input of ${['up','left','down','right','action'][inputindex]}.`,false,null,inspect_ID);
+			 }
+		}
+
+		
+        bannedGroup = [];
         level.commandQueue=[];
         level.commandQueueSourceRules=[];
         var startRuleGroupIndex=0;
         var rigidloop=false;
-        var startState = commitPreservationState();
+		const startState = {
+			objects: new Int32Array(level.objects),
+			movements: new Int32Array(level.movements),
+			rigidGroupIndexMask: level.rigidGroupIndexMask.concat([]),
+			rigidMovementAppliedMask: level.rigidMovementAppliedMask.concat([]),
+			commandQueue: [],
+			commandQueueSourceRules: []
+		}
 	    sfxCreateMask.setZero();
 	    sfxDestroyMask.setZero();
 
@@ -2287,30 +2583,69 @@ function processInput(dir,dontDoWin,dontModify) {
 
 		calculateRowColMasks();
 
+        var i=0;
         do {
         //not particularly elegant, but it'll do for now - should copy the world state and check
         //after each iteration
         	rigidloop=false;
         	i++;
         	
-        	if (verbose_logging){consolePrint('applying rules');}
 
-        	applyRules(state.rules, state.loopPoint, startRuleGroupIndex, level.bannedGroup);
-        	var shouldUndo = resolveMovements();
+
+        	applyRules(state.rules, state.loopPoint, startRuleGroupIndex, bannedGroup);
+        	var shouldUndo = resolveMovements(level,bannedGroup);
 
         	if (shouldUndo) {
         		rigidloop=true;
-        		restorePreservationState(startState);
+
+				{
+					// trackback
+					consolePrint("Rigid movement application failed. Rolling back...")
+					//don't need to concat or anythign here, once something is restored it won't be used again.
+					level.objects = new Int32Array(startState.objects)
+					level.movements = new Int32Array(startState.movements)
+					level.rigidGroupIndexMask = startState.rigidGroupIndexMask.concat([])
+					level.rigidMovementAppliedMask = startState.rigidMovementAppliedMask.concat([])
+					// TODO: shouldn't we also save/restore the level data computed by level.calculateRowColMasks() ?
+					level.commandQueue = startState.commandQueue.concat([])
+					level.commandQueueSourceRules = startState.commandQueueSourceRules.concat([])
+					sfxCreateMask.setZero()
+					sfxDestroyMask.setZero()
+					// TODO: should
+
+				}
+
+				if (verbose_logging && rigidloop && i>0){				
+					consolePrint('Relooping through rules because of rigid.');
+						
+					debugger_turnIndex++;
+					addToDebugTimeline(level,-2);//pre-movement-applied debug state
+				}
+
         		startRuleGroupIndex=0;//rigidGroupUndoDat.ruleGroupIndex+1;
         	} else {
-        		if (verbose_logging){consolePrint('applying late rules');}
+        		if (verbose_logging){
+
+					var eof_idx = debug_visualisation_array[debugger_turnIndex].length+1;//just need some number greater than any rule group
+					var inspect_ID = addToDebugTimeline(level,eof_idx);
+
+					consolePrint(`Processed movements.`,false,null,inspect_ID);
+					
+					if (state.lateRules.length>0){
+											
+						debugger_turnIndex++;
+						addToDebugTimeline(level,-2);//pre-movement-applied debug state
+					
+						consolePrint('Applying late rules');
+					}
+				}
         		applyRules(state.lateRules, state.lateLoopPoint, 0);
         		startRuleGroupIndex=0;
         	}
         } while (i < 50 && rigidloop);
 
         if (i>=50) {
-            consolePrint("looped through 50 times, gave up.  too many loops!");
+            consolePrint("Looped through 50 times, gave up.  too many loops!");
         }
 
 
@@ -2328,8 +2663,8 @@ function processInput(dir,dontDoWin,dontModify) {
         		if (verbose_logging){
 	    			consolePrint('require_player_movement set, but no player movement detected, so cancelling turn.');
 	    			consoleCacheDump();
-        		}
-        		backups.push(bak);
+				}
+        		addUndoState(bak);
         		DoUndo(true,false);
         		return false;
         	}
@@ -2344,8 +2679,8 @@ function processInput(dir,dontDoWin,dontModify) {
 	    		var r = level.commandQueueSourceRules[level.commandQueue.indexOf('cancel')];
 	    		consolePrintFromRule('CANCEL command executed, cancelling turn.',r,true);
 			}
-    		backups.push(bak);
-			messagetext = "";
+			processOutputCommands(level.commandQueue);
+    		addUndoState(bak);
     		DoUndo(true,false);
     		tryPlayCancelSound();
     		return false;
@@ -2357,16 +2692,13 @@ function processInput(dir,dontDoWin,dontModify) {
 	    		consolePrintFromRule('RESTART command executed, reverting to restart state.',r);
 	    		consoleCacheDump();
 			}
-    		backups.push(bak);
-			messagetext = "";
+			processOutputCommands(level.commandQueue);
+    		addUndoState(bak);
 	    	DoRestart(true);
     		return true;
-	    } 
-
-	    if (dontModify && level.commandQueue.indexOf('win')>=0) {
-	    	return true;
-	    }
-	    
+		} 
+		
+		
         var modified=false;
 	    for (var i=0;i<level.objects.length;i++) {
 	    	if (level.objects[i]!==bak.dat[i]) {
@@ -2374,12 +2706,18 @@ function processInput(dir,dontDoWin,dontModify) {
 	        		if (verbose_logging) {
 	        			consoleCacheDump();
 	        		}
-	        		backups.push(bak);
+	        		addUndoState(bak);
 	        		DoUndo(true,false);
 					return true;
 				} else {
 					if (dir!==-1) {
-	    				backups.push(bak);
+						addUndoState(bak);
+					} else if (backups.length > 0) {
+						// This is for the case that diffs break the undo buffer for real-time games 
+						// ( c f https://github.com/increpare/PuzzleScript/pull/796 ),
+						// because realtime ticks are ignored when the user presses undo and the backup
+						// array reflects this structure.  
+						backups[backups.length - 1] = unconsolidateDiff(backups[backups.length - 1], bak);					
 	    			}
 	    			modified=true;
 	    		}
@@ -2387,6 +2725,10 @@ function processInput(dir,dontDoWin,dontModify) {
 	    	}
 	    }
 
+		if (dontModify && level.commandQueue.indexOf('win')>=0) {	
+	    	return true;	
+		}
+		
 		if (dontModify) {		
     		if (verbose_logging) {
     			consoleCacheDump();
@@ -2416,23 +2758,11 @@ function processInput(dir,dontDoWin,dontModify) {
         	}
         }
 
-	    for (var i=0;i<level.commandQueue.length;i++) {
-	 		var command = level.commandQueue[i];
-	 		if (command.charAt(1)==='f')  {//identifies sfxN
-	 			tryPlaySimpleSound(command);
-	 		}  	
-			if (unitTesting===false) {
-				if (command==='message') {
-					showTempMessage();
-				}
-			} else {
-				messagetext = "";
-			}
-	    }
+	    processOutputCommands(level.commandQueue);
 
 	    if (textMode===false) {
 	    	if (verbose_logging) { 
-	    		consolePrint('Checking win condition.');
+	    		consolePrint('Checking win conditions.');
 			}
 			if (dontDoWin===undefined){
 				dontDoWin = false;
@@ -2449,8 +2779,8 @@ function processInput(dir,dontDoWin,dontModify) {
 				restartTarget=level4Serialization();
 				hasUsedCheckpoint=true;
 				var backupStr = JSON.stringify(restartTarget);
-				localStorage[document.URL+'_checkpoint']=backupStr;
-				localStorage[document.URL]=curlevel;
+				storage_set(document.URL+'_checkpoint',backupStr);
+				storage_set(document.URL,curlevel);				
 			}	 
 
 		    if (level.commandQueue.indexOf('again')>=0 && modified) {
@@ -2480,8 +2810,11 @@ function processInput(dir,dontDoWin,dontModify) {
 			    messagetext = oldmessagetext;
 		    }   
 		}
-		    
-
+		
+		if (verbose_logging) { 
+			consolePrint(`Turn complete`);    
+		}
+		
 	    level.commandQueue=[];
 	    level.commandQueueSourceRules=[];
 
@@ -2505,7 +2838,11 @@ function checkWin(dontDoWin) {
 	}
 
 	if (level.commandQueue.indexOf('win')>=0) {
-		consolePrint("Win Condition Satisfied");
+		if (runrulesonlevelstart_phase){
+			consolePrint("Win Condition Satisfied (However this is in the run_rules_on_level_start rule pass, so I'm going to ignore it for you.  Why would you want to complete a level before it's already started?!)");		
+		} else {
+			consolePrint("Win Condition Satisfied");
+		}
 		if(!dontDoWin){
 			DoWin();
 		}
@@ -2571,7 +2908,11 @@ function checkWin(dontDoWin) {
 	}
 
 	if (won) {
-		consolePrint("Win Condition Satisfied");
+		if (runrulesonlevelstart_phase){
+			consolePrint("Win Condition Satisfied (However this is in the run_rules_on_level_start rule pass, so I'm going to ignore it for you.  Why would you want to complete a level before it's already started?!)");		
+		} else {
+			consolePrint("Win Condition Satisfied");
+		}
 		if (!dontDoWin){
 			DoWin();
 		}
@@ -2611,7 +2952,7 @@ function nextLevel() {
 	if (state && state.levels && (curlevel>state.levels.length) ){
 		curlevel=state.levels.length-1;
 	}
-	
+	ignoreNotJustPressedAction=true;
 	if (titleScreen) {
 		if (titleSelection===0) {
 			//new game
@@ -2631,6 +2972,7 @@ function nextLevel() {
 		if (curlevel<(state.levels.length-1))
 		{			
 			curlevel++;
+			curlevelTarget=null;
 			textMode=false;
 			titleScreen=false;
 			quittingMessageScreen=false;
@@ -2643,11 +2985,8 @@ function nextLevel() {
 			}
 		} else {
 			try{
-				if (!!window.localStorage) {
-	
-					localStorage.removeItem(document.URL);
-					localStorage.removeItem(document.URL+'_checkpoint');
-				}
+				storage_remove(document.URL);
+				storage_remove(document.URL+'_checkpoint');				
 			} catch(ex){
 					
 			}
@@ -2660,16 +2999,16 @@ function nextLevel() {
 		//continue existing game
 	}
 	try {
-		if (!!window.localStorage) {
-			localStorage[document.URL]=curlevel;
-			if (curlevelTarget!==null){
-				restartTarget=level4Serialization();
-				var backupStr = JSON.stringify(restartTarget);
-				localStorage[document.URL+'_checkpoint']=backupStr;
-			} else {
-				localStorage.removeItem(document.URL+"_checkpoint");
-			}		
-		}
+		
+		storage_set(document.URL,curlevel);
+		if (curlevelTarget!==null){
+			restartTarget=level4Serialization();
+			var backupStr = JSON.stringify(restartTarget);
+			storage_set(document.URL+'_checkpoint',backupStr);
+		} else {
+			storage_remove(document.URL+"_checkpoint");
+		}		
+		
 	} catch (ex) {
 
 	}
@@ -2678,7 +3017,6 @@ function nextLevel() {
 		oldflickscreendat=[0,0,Math.min(state.metadata.flickscreen[0],level.width),Math.min(state.metadata.flickscreen[1],level.height)];
 	}
 	canvasResize();	
-	clearInputHistory();
 }
 
 function goToTitleScreen(){
@@ -2687,8 +3025,11 @@ function goToTitleScreen(){
 	titleScreen=true;
 	textMode=true;
 	doSetupTitleScreenLevelContinue();
-	titleSelection=(curlevel>0||curlevelTarget!==null)?1:0;
+	titleSelection=showContinueOptionOnTitleScreen()?1:0;
 	generateTitleScreen();
+	if (canvas!==null){//otherwise triggers error in cat bastard test
+		regenSpriteImages();
+	}
 }
 
 

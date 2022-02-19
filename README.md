@@ -12,6 +12,10 @@ I didn't rewrite puzzlescript engine in C++. The javascript engine is embeded so
 
 PuzzlescriptWrapper is published under the terms of the LGPL v3 license (See both [GPL](https://www.gnu.org/licenses/gpl.txt) and [LGPL](https://www.gnu.org/licenses/lgpl.txt) Licenses for more details)
 
+## v2.0.3
+
+- embeded puzzlescript engine updated to v1.7
+
 ## v2.0.2
 
 - Adding music support: if you used the youtube meta in your puzzlescript game, add an audio file in ./data/music/ with the youtube id as the filename.

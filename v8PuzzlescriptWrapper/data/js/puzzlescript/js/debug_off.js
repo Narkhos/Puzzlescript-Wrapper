@@ -3,6 +3,7 @@ var canDump=false;
 var canOpenEditor=false;
 var canYoutube=true;
 var IDE=false;
+const diffToVisualize=null;
 
 function stripTags(str) {
 	var div = document.createElement("div");
@@ -11,7 +12,7 @@ function stripTags(str) {
 	return result;
 }
 
-function consolePrint(str,urgent){
+function consolePrint(linenumber,inspect_ID){
 /*	var errorText = document.getElementById("errormessage");
 	
 	str=stripTags(str);
